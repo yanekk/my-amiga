@@ -1,0 +1,18 @@
+{
+    "files.associations": {
+        "printer.h": "c",
+        "stdio.h": "c",
+        "exec.h": "c",
+        "types.h": "c",
+        "stdint.h": "c",
+        "dos.h": "c",
+        "workbench.h": "c",
+        "intuition.h": "c",
+        "exec_protos.h": "c",
+        "window.h": "c",
+        "menu.h": "c",
+        "border.h": "c",
+        "*.old": "c"
+    },
+    "C_Cpp.errorSquiggles": "Disabled"
+}

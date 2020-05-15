@@ -1,0 +1,14 @@
+{
+    "tasks": [
+        {
+            "type": "shell",
+            "label": "compile",
+            "command": "C:\\cygwin64\\bin\\make.exe",
+            "args": [ ],
+            "options": {
+                "cwd": "."
+            }
+        }
+    ],
+    "version": "2.0.0"
+}
