@@ -14,37 +14,19 @@
 
 int main(void) 
 {
-    struct Gadget *gadget;
-    struct Layout layout;
+    struct Layout* layout = CreateLayout();
+    AddGadgetToLayout(layout, BUTTON_KIND, GAD_BUTTON, "Button", PLACETEXT_IN, TAG_END);
+    AddGadgetToLayout(layout, SLIDER_KIND, GAD_SLIDER, "Button", PLACETEXT_IN, TAG_END);
+    AddGadgetToLayout(layout, STRING_KIND, GAD_TEXTBOX, "Text box", PLACETEXT_ABOVE, TAG_END);
+    AddGadgetToLayout(layout, CHECKBOX_KIND, GAD_CHECKBOX, "Checkbox", PLACETEXT_RIGHT, TAG_END);
 
-    gadget = CreateLayout(&layout);
-    
-    AdjustNewGadget(&layout, "Button", GAD_BUTTON, PLACETEXT_IN);
-    gadget = CreateGadget(BUTTON_KIND, gadget, &layout.newGadget, TAG_END);
-    AddNextGadgetToLayout(&layout);
-
-    AdjustNewGadget(&layout, "Slider", GAD_SLIDER, PLACETEXT_ABOVE);
-    gadget = CreateGadget(SLIDER_KIND, gadget, &layout.newGadget, TAG_END);
-    AddNextGadgetToLayout(&layout);
-
-    AdjustNewGadget(&layout, "Text box", GAD_TEXTBOX, PLACETEXT_ABOVE);
-    gadget = CreateGadget(STRING_KIND, gadget, &layout.newGadget, TAG_END);
-    AddNextGadgetToLayout(&layout);
-
-    AdjustNewGadget(&layout, "Checkbox", GAD_CHECKBOX, PLACETEXT_RIGHT);
-    gadget = CreateGadget(CHECKBOX_KIND, gadget, &layout.newGadget, TAG_END);
-    AddNextGadgetToLayout(&layout);
-
-    AdjustNewGadget(&layout, "Cycle", GAD_CYCLE, PLACETEXT_ABOVE);
     char *labels[4] = {"A", "B", "C", NULL};
-    gadget = CreateGadget(CYCLE_KIND, gadget, &layout.newGadget, 
-        GTCY_Labels, labels,
-        GTCY_Active, 1,
+    AddGadgetToLayout(layout, CYCLE_KIND, GAD_CYCLE, "Cycle", PLACETEXT_ABOVE, 
+        GTCY_Labels, labels, 
+        GTCY_Active, 1, 
         TAG_END);
-    AddNextGadgetToLayout(&layout);
-
-    AdjustNewGadget(&layout, "Scroller", GAD_SCROLLER, PLACETEXT_ABOVE);
-    gadget = CreateGadget(SCROLLER_KIND, gadget, &layout.newGadget, 
+        
+    AddGadgetToLayout(layout, SCROLLER_KIND, GAD_SCROLLER, "Scroller", PLACETEXT_ABOVE, 
         GTSC_Top, 0,
         GTSC_Total, 100,
         GTSC_Visible, 10,
@@ -62,30 +44,24 @@ int main(void)
     struct Node node_3 = { .ln_Name = "Three" };
     AddTail(&list, &node_3); 
 
-    AddNextGadgetToLayout(&layout);
-    layout.newGadget.ng_Height = GADGET_HEIGHT * 4;
-    AdjustNewGadget(&layout, "List view", GAD_LIST, PLACETEXT_ABOVE);
-    gadget = CreateGadget(LISTVIEW_KIND, gadget, &layout.newGadget, 
+    layout->newGadget.ng_Height = GADGET_HEIGHT * 4;
+
+    AddGadgetToLayout(layout, LISTVIEW_KIND, GAD_LIST, "Scroller", PLACETEXT_ABOVE, 
         GTLV_Labels, &list,
         GTLV_ShowSelected, 0,
         TAG_END);
-        
-    AddNextGadgetToLayout(&layout);
-    AdjustNewGadget(&layout, "Palette", GAD_PALETTE, PLACETEXT_ABOVE);
-    gadget = CreateGadget(PALETTE_KIND, gadget, &layout.newGadget, 
+
+    AddGadgetToLayout(layout, PALETTE_KIND, GAD_PALETTE, "Palette", PLACETEXT_ABOVE,  
         GTPA_Depth, 2,
         TAG_END);
-
-    AddNextGadgetToLayout(&layout);
-    layout.newGadget.ng_Height = GADGET_HEIGHT;
-    AdjustNewGadget(&layout, "Label", GAD_LABEL, PLACETEXT_ABOVE);
-    gadget = CreateGadget(TEXT_KIND, gadget, &layout.newGadget, 
-        TAG_END);
+        
+    layout->newGadget.ng_Height = GADGET_HEIGHT;
+    AddGadgetToLayout(layout, TEXT_KIND, GAD_LABEL, "Label", PLACETEXT_ABOVE, TAG_END);
 
     struct Window *window = OpenWindowTags(NULL,
         WA_Width, WINDOW_WIDTH,
         WA_Height, WINDOW_HEIGHT,
-        WA_Gadgets, layout.glist,
+        WA_Gadgets, layout->glist,
         WA_CloseGadget, TRUE,
         WA_SizeGadget, TRUE,
         WA_DepthGadget, TRUE,
@@ -139,7 +115,7 @@ int main(void)
         }
     }
 
-    FreeLayout(&layout);
+    FreeLayout(layout);
     CloseWindow(window);
     return EXIT_SUCCESS;
 }

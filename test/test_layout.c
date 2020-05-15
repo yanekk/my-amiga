@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <stdarg.h>
 
 #include <clib/gadtools_protos.h>
 #include "../src/layout.h"
@@ -22,36 +23,12 @@ void tearDown(void)
 
 static void test_node_creation(void)
 {
-   /*
-   struct List* myList = AllocMem(sizeof(struct List), MEMF_CLEAR);
-   NewList(myList);
-
-   MyNode node_1;
-   node_1.node.ln_Name = "One";
-
-   MyNode node_2;
-   node_2.node.ln_Name = "Two";
-
-   AddTail(myList, (struct Node*) &node_1);
-   AddTail(myList, (struct Node*) &node_2);
-
-   struct Node *node;
-   for(node = myList->lh_Head; node->ln_Succ; node = node->ln_Succ) {
-      printf("%s\n", node->ln_Name);
-   }
-   */
-   struct NewGadget gadget;
-   BeginLayout(&gadget);
-   TEST_ASSERT_EQUAL(PADDING, gadget.ng_LeftEdge);
-   TEST_ASSERT_EQUAL(PADDING * 2, gadget.ng_TopEdge);
-
-   AddNextGadgetToLayout(&gadget, GADGET_HEIGHT);
-   TEST_ASSERT_EQUAL(PADDING + GADGET_WIDTH + PADDING, gadget.ng_LeftEdge);
-   TEST_ASSERT_EQUAL(PADDING * 2, gadget.ng_TopEdge);
-
-   AddNextGadgetToLayout(&gadget, GADGET_HEIGHT);
-   TEST_ASSERT_EQUAL(PADDING, gadget.ng_LeftEdge);
-   TEST_ASSERT_EQUAL(PADDING * 2 + GADGET_HEIGHT + PADDING, gadget.ng_TopEdge);
+   struct Layout* layout = CreateLayout();
+   int buttonId = AddGadgetToLayout(layout, BUTTON_KIND, "First Button", PLACETEXT_IN, GA_ActivateKey, 123, GA_BackFill, 321, TAG_END);
+   int secondButtonId = AddGadgetToLayout(layout, BUTTON_KIND, "Second Button", PLACETEXT_IN, GA_ActivateKey, 123, GA_BackFill, 321, TAG_END);
+   TEST_ASSERT_EQUAL(1, buttonId);
+   TEST_ASSERT_EQUAL(2, secondButtonId);
+   FreeLayout(layout);
 }
 
 int main(void)

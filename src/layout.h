@@ -3,6 +3,7 @@ struct Layout
 {
     struct NewGadget newGadget;
     struct Gadget* glist;
+    struct Gadget* lastGadget;
 };
 
 typedef enum GAD_TYPE 
@@ -25,7 +26,6 @@ typedef enum GAD_TYPE
 #define WINDOW_WIDTH 275
 #define WINDOW_HEIGHT 200
 
-struct Gadget* CreateLayout(struct Layout* layout);
-void AdjustNewGadget(struct Layout* layout, char* label, GAD_TYPE gadgetId, ULONG flags) ;
+struct Layout* CreateLayout();
+void AddGadgetToLayout(struct Layout* layout, UBYTE kind, GAD_TYPE gadgetId, char* label, ULONG flags, Tag tag1, ...);
 void FreeLayout(struct Layout* layout);
-void AddNextGadgetToLayout(struct Layout* layout);
