@@ -1,4 +1,6 @@
 #pragma once
 #include <clib/graphics_protos.h>
+#include "viewport.h"
 
-VOID DrawFilledBox(UBYTE *displaymem, struct BitMap* bitMap, WORD fillcolor, WORD plane);
+VOID DrawFilledBox(SHORT offset, struct BitMap* bitMap, WORD fillcolor);
+//VOID DrawFilledBox(UWORD offset, struct BitMap* bitMap, WORD fillcolor);

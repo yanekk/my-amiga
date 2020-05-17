@@ -3,17 +3,23 @@
 #include "drawing.h"
 #include "viewport.h"
 
-VOID DrawFilledBox(UBYTE *displaymem, struct BitMap* bitMap, WORD fillcolor, WORD plane)
+VOID DrawFilledBox(SHORT offset, struct BitMap* bitMap, WORD fillcolor)
 {
-    WORD boxWidth = (WIDTH/2)/8;
-    WORD boxHeight = HEIGHT/2;
-    UBYTE value = ((fillcolor & (1 << plane)) != 0) ? 0xff : 0x00;
-    WORD width;
-    for( ; boxHeight; boxHeight--)
+    for (int depth = 0; depth < DEPTH; depth++)
     {
-        for(width=0 ; width < boxWidth; width++)
-            *displaymem++ = value;
+        UBYTE * displaymem = bitMap->Planes[depth] + offset;
 
-        displaymem += (bitMap->BytesPerRow - boxWidth);
+        WORD boxWidth = (WIDTH/2)/8;
+        WORD boxHeight = HEIGHT/2;
+
+        UBYTE value = ((fillcolor & (1 << depth)) != 0) ? 0xFF : 0x00;
+
+        for( ; boxHeight; boxHeight--)
+        {
+            for(WORD width = 0; width < boxWidth; width++)
+                *displaymem++ = value;
+
+            displaymem += (bitMap->BytesPerRow - boxWidth);
+        }
     }
 }

@@ -30,16 +30,9 @@ int main(void)
     struct ViewInfo viewInfo = { 0 };
     CreateView(&viewInfo);
 
-    UBYTE *displaymem = NULL;
     static SHORT boxoffsets[] = { 802, 2010, 3218 };
     for (int box = 1; box <= 3; box++) 
-    {
-        for (int depth = 0; depth < DEPTH; depth++)
-        {
-            displaymem = viewInfo.bitMap.Planes[depth] + boxoffsets[box-1];
-            DrawFilledBox(displaymem, &viewInfo.bitMap, box, depth);
-        }
-    }
+        DrawFilledBox(boxoffsets[box-1], &viewInfo.bitMap, box);
 
     Delay(1 * TICKS_PER_SECOND);
     
