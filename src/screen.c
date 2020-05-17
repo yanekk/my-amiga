@@ -2,14 +2,12 @@
 #include <clib/graphics_protos.h>
 #include <graphics/videocontrol.h>
 
-#include "viewport.h"
+#include "screen.h"
 
 #define BLACK 0x000
 #define RED 0xf00
 #define GREEN 0x0f0
 #define BLUE 0x00f
-
-void DrawFilledBox(UBYTE *displaymem, struct BitMap* bitMap, WORD fillcolor, WORD plane);
 
 void CreateView(struct ViewInfo* viewInfo) {
     InitView(&viewInfo->view);  

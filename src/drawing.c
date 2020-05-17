@@ -1,18 +1,18 @@
 #include <clib/exec_protos.h>
 #include <clib/graphics_protos.h>
 #include "drawing.h"
-#include "viewport.h"
+#include "screen.h"
 
-VOID DrawFilledBox(SHORT offset, struct BitMap* bitMap, WORD fillcolor)
+VOID DrawBox(struct Box rectangle, struct BitMap* bitMap)
 {
     for (int depth = 0; depth < DEPTH; depth++)
     {
-        UBYTE * displaymem = bitMap->Planes[depth] + offset;
+        UBYTE * displaymem = bitMap->Planes[depth] + rectangle.offset;
 
-        WORD boxWidth = (WIDTH/2)/8;
-        WORD boxHeight = HEIGHT/2;
+        WORD boxWidth = (rectangle.width)/4;
+        WORD boxHeight = rectangle.height;
 
-        UBYTE value = ((fillcolor & (1 << depth)) != 0) ? 0xFF : 0x00;
+        UBYTE value = ((rectangle.color & (1 << depth)) != 0) ? 0xFF : 0x00;
 
         for( ; boxHeight; boxHeight--)
         {

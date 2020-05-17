@@ -14,14 +14,14 @@
 
 #include <proto/exec.h>
 #include "layout.h"
-#include "viewport.h"
+#include "screen.h"
 #include "drawing.h"
 
 #define GADGETID(x) (((struct Gadget *)(x->IAddress))->GadgetID)
 
 struct GfxBase *GfxBase = NULL;
 
-int main(void) 
+static void DrawBoxes() 
 {
     GfxBase = (struct GfxBase *)OpenLibrary("graphics.library", 0);
 
@@ -30,16 +30,25 @@ int main(void)
     struct ViewInfo viewInfo = { 0 };
     CreateView(&viewInfo);
 
-    static SHORT boxoffsets[] = { 802, 2010, 3218 };
-    for (int box = 1; box <= 3; box++) 
-        DrawFilledBox(boxoffsets[box-1], &viewInfo.bitMap, box);
-
-    Delay(1 * TICKS_PER_SECOND);
+    static struct Box boxes[3] = {
+        {.offset = 802, .width = 100, .height = 100, .color = 1 },
+        {.offset = 2010, .width = 100, .height = 100, .color = 2 },
+        {.offset = 3218, .width = 100, .height = 100, .color = 3 },
+    };
     
+    for (int box = 0; box <= 2; box++) 
+        DrawBox(boxes[box], &viewInfo.bitMap);
+    Delay(1 * TICKS_PER_SECOND);
+
     LoadView(oldView);
 
     FreeView(&viewInfo);
     CloseLibrary((struct Library *)GfxBase);
+}
+
+int main(void) 
+{
+    DrawBoxes();
 
     return EXIT_SUCCESS;
 
