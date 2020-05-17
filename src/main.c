@@ -7,13 +7,49 @@
 #include <clib/alib_protos.h>
 #include <clib/intuition_protos.h>
 #include <clib/gadtools_protos.h>
+#include <clib/exec_protos.h>
+#include <clib/dos_protos.h>
+#include <clib/graphics_protos.h>
+#include <graphics/gfxbase.h>
+
 #include <proto/exec.h>
 #include "layout.h"
+#include "viewport.h"
+#include "drawing.h"
 
 #define GADGETID(x) (((struct Gadget *)(x->IAddress))->GadgetID)
 
+struct GfxBase *GfxBase = NULL;
+
 int main(void) 
 {
+    GfxBase = (struct GfxBase *)OpenLibrary("graphics.library", 0);
+
+    struct View* oldView = GfxBase->ActiView;
+
+    struct ViewInfo viewInfo = { 0 };
+    CreateView(&viewInfo);
+
+    UBYTE *displaymem = NULL;
+    static SHORT boxoffsets[] = { 802, 2010, 3218 };
+    for (int box = 1; box <= 3; box++) 
+    {
+        for (int depth = 0; depth < DEPTH; depth++)
+        {
+            displaymem = viewInfo.bitMap.Planes[depth] + boxoffsets[box-1];
+            DrawFilledBox(displaymem, &viewInfo.bitMap, box, depth);
+        }
+    }
+
+    Delay(1 * TICKS_PER_SECOND);
+    
+    LoadView(oldView);
+
+    FreeView(&viewInfo);
+    CloseLibrary((struct Library *)GfxBase);
+
+    return EXIT_SUCCESS;
+
     struct Layout* layout = CreateLayout();
     AddGadgetToLayout(layout, BUTTON_KIND, GAD_BUTTON, "Button", PLACETEXT_IN, TAG_END);
     AddGadgetToLayout(layout, SLIDER_KIND, GAD_SLIDER, "Button", PLACETEXT_IN, TAG_END);
@@ -44,7 +80,7 @@ int main(void)
     struct Node node_3 = { .ln_Name = "Three" };
     AddTail(&list, &node_3); 
 
-    layout->newGadget.ng_Height = GADGET_HEIGHT * 4;
+    layout->newGadget.ng_Height = GADGET_HEIGHT * 3;
 
     AddGadgetToLayout(layout, LISTVIEW_KIND, GAD_LIST, "Scroller", PLACETEXT_ABOVE, 
         GTLV_Labels, &list,
@@ -56,7 +92,10 @@ int main(void)
         TAG_END);
         
     layout->newGadget.ng_Height = GADGET_HEIGHT;
-    AddGadgetToLayout(layout, TEXT_KIND, GAD_LABEL, "Label", PLACETEXT_ABOVE, TAG_END);
+    //AddGadgetToLayout(layout, TEXT_KIND, GAD_LABEL, "Label", PLACETEXT_ABOVE, TAG_END);
+    AddGadgetToLayout(layout, BUTTON_KIND, GAD_FILE_REQUESTER, "File Request", PLACETEXT_IN, TAG_END);
+    AddGadgetToLayout(layout, BUTTON_KIND, GAD_FONT_REQUESTER, "Font Request", PLACETEXT_IN, TAG_END);
+    AddGadgetToLayout(layout, BUTTON_KIND, GAD_VIEWPORT, "Open ViewPort", PLACETEXT_IN, TAG_END);
 
     struct Window *window = OpenWindowTags(NULL,
         WA_Width, WINDOW_WIDTH,
@@ -98,6 +137,15 @@ int main(void)
                         break;
                     case GAD_PALETTE:
                         printf("Palette: %d\n", imsg->Code);
+                        break;
+                    case GAD_FILE_REQUESTER:
+                        OpenFileRequester();
+                        break;
+                    case GAD_FONT_REQUESTER:
+                        OpenFontRequester();
+                        break;
+                    case GAD_VIEWPORT:
+                        //openViewPort();
                         break;
                 }
             }

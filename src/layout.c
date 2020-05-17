@@ -2,25 +2,22 @@
 #include <clib/gadtools_protos.h>
 #include <clib/intuition_protos.h>
 #include <clib/exec_protos.h>
+#include <clib/asl_protos.h>
 #include <stdarg.h>
 #include <stdio.h>
 #define MAX_TAGS 32
 
 static struct TextAttr Topaz80 = { "topaz.font", 8, 0, 0, };
-
 struct Layout* CreateLayout() 
 {
     struct Layout* layout = AllocVec(sizeof(struct Layout), MEMF_CLEAR);
     struct Screen* screen = LockPubScreen(NULL);
     struct VisualInfo* visualInfo = GetVisualInfo(screen, TAG_END);
-
-    layout->newGadget.ng_TextAttr   = &Topaz80;
-    layout->newGadget.ng_VisualInfo = visualInfo;
-
-    layout->newGadget.ng_LeftEdge = PADDING;
-    layout->newGadget.ng_TopEdge = PADDING * 2;
-    layout->newGadget.ng_Width      = GADGET_WIDTH;
-    layout->newGadget.ng_Height     = GADGET_HEIGHT;
+    layout->newGadget = (struct NewGadget) {
+        .ng_TextAttr = &Topaz80,     .ng_VisualInfo = visualInfo,
+        .ng_LeftEdge = PADDING,      .ng_TopEdge    = PADDING * 2,
+        .ng_Width    = GADGET_WIDTH, .ng_Height     = GADGET_HEIGHT,
+    };
     layout->lastGadget = CreateContext(&layout->glist);
     return layout;
 }
@@ -63,4 +60,31 @@ void FreeLayout(struct Layout* layout)
     FreeGadgets(layout->glist);
     FreeVisualInfo(layout->newGadget.ng_VisualInfo);
     FreeVec(layout);
+}
+
+void OpenFileRequester() 
+{
+    struct FileRequester* requester = (struct FileRequester*) AllocAslRequestTags(ASL_FileRequest, 
+        ASL_Hail, "File Requester",
+        ASL_Height, 200,
+        ASL_Width, 150,
+
+    TAG_END);
+    if(AslRequestTags(requester, TAG_END)) {
+        printf("Path: %s, File: %s\n", requester->fr_Drawer, requester->fr_File);
+    };
+    FreeAslRequest(requester);
+}
+
+void OpenFontRequester() 
+{
+    struct FileRequester* requester = (struct FileRequester*) AllocAslRequestTags(ASL_FontRequest, 
+        ASL_Hail, "Font Requester",
+        ASL_Height, 200,
+        ASL_Width, 150,
+    TAG_END);
+    if(AslRequestTags(requester, TAG_END)) {
+        printf("Path: %s, File: %s\n", requester->fr_Drawer, requester->fr_File);
+    };
+    FreeAslRequest(requester);
 }
