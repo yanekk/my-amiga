@@ -50,14 +50,14 @@ static void DrawBoxes()
 
     CreateView(viewInfo);
 
-    /*static struct Box boxes[3] = {
+    static struct Box boxes[3] = {
         {.x = 25, .y = 25, .width = 75, .height = 75, .color = 1 },
         {.x = 50, .y = 50, .width = 75, .height = 75, .color = 2 },
         {.x = 75, .y = 75, .width = 75, .height = 75, .color = 3 },
     };
     
     for (int box = 0; box <= 2; box++) 
-        DrawBox(viewInfo, boxes[box]);*/
+        DrawBox(viewInfo, boxes[box]);
 
     ULONG rassize = RASSIZE(WIDTH, HEIGHT);
     UBYTE *tmpbuf = AllocVec (rassize, MEMF_CHIP|MEMF_CLEAR);
@@ -106,7 +106,7 @@ static void DrawBoxes()
     LoadView(&viewInfo->view);
     WaitTOF();
 
-    //WritePixel(rp, 150, 150);
+    WritePixel(rp, 150, 150);
     /*USHORT areaPattern[3][8] =
     {
         {
@@ -134,12 +134,12 @@ static void DrawBoxes()
     SetAPen(rp, -1);
     SetBPen(rp, 0);
     SetDrMd(rp, JAM2);*/
-    /*SetAPen(rp, 2);
+    SetAPen(rp, 2);
     AreaMove(rp, 0, 0);
     AreaDraw(rp, 40, 0);
     AreaDraw(rp, 40, 40);
     AreaDraw(rp, 0, 40);
-    AreaEnd(rp);*/
+    AreaEnd(rp);
 
     /*const UBYTE areaPattern[3][8] =
     {
@@ -158,6 +158,13 @@ static void DrawBoxes()
 
     //BltTemplate()
 
+    SetAPen(rp, 2);
+    SetDrMd(rp, JAM2);
+    DrawEllipse(rp, 100, 100, 20, 50);
+
+    SetAPen(rp, 3);
+    DrawCircle(rp, 150, 150, 20);
+
     for(int i = 0; i < 100; i++) {
         myVSprite.X += 2;
         SortGList(rp);
@@ -166,32 +173,28 @@ static void DrawBoxes()
         WaitTOF();
     }
 
-   /* SetAPen(rp, 2);
-    SetDrMd(rp, JAM2);
-    DrawEllipse(rp, 100, 100, 20, 50);
 
-    SetAPen(rp, 3);
-    DrawCircle(rp, 150, 150, 20);*/
 
     //SetDrPt(&viewInfo->rastPort, 0xAAAA);
     //Move(&viewInfo->rastPort, 100, 100);
     //Draw(&viewInfo->rastPort, 120, 130);
 
-    /*SHORT linearray[] = {
+    SHORT linearray[] = {
         10, 10,
         60, 15,
         15, 15,
         30, 10,
         10, 10
     };
-    */
-    //PolyDraw(&viewInfo->rastPort, 4, linearray);
     
-    /*SetAfPt(rp, NULL, 0);
+    PolyDraw(&viewInfo->rastPort, 4, linearray);
+    
+    SetAfPt(rp, NULL, 0);
     Flood(rp, 1, 100, 100);
     //SetRast(&viewInfo->rastPort, 0);
+
     FreeVec(areaBuffer);
-    FreeVec(tmpbuf);*/
+    FreeVec(tmpbuf);
     Delay(1 * TICKS_PER_SECOND);
     
     RemVSprite(&myVSprite);
