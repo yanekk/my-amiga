@@ -3,23 +3,8 @@
 #include "drawing.h"
 #include "screen.h"
 
-VOID DrawBox(struct Box rectangle, struct BitMap* bitMap)
+VOID DrawBox(struct ViewInfo* viewInfo, struct Box box)
 {
-    for (int depth = 0; depth < DEPTH; depth++)
-    {
-        UBYTE * displaymem = bitMap->Planes[depth] + rectangle.offset;
-
-        WORD boxWidth = (rectangle.width)/4;
-        WORD boxHeight = rectangle.height;
-
-        UBYTE value = ((rectangle.color & (1 << depth)) != 0) ? 0xFF : 0x00;
-
-        for( ; boxHeight; boxHeight--)
-        {
-            for(WORD width = 0; width < boxWidth; width++)
-                *displaymem++ = value;
-
-            displaymem += (bitMap->BytesPerRow - boxWidth);
-        }
-    }
+    SetAPen(&viewInfo->rastPort, box.color);
+    RectFill(&viewInfo->rastPort, box.x, box.y, box.x + box.width, box.y + box.height);
 }
