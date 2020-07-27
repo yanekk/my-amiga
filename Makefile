@@ -12,7 +12,7 @@ CFLAGS += -std=c99
 CFLAGS += -g
 CFLAGS += -Wall
 CFLAGS += -Wextra
-CFLAGS += -pedantic
+#CFLAGS += -pedantic
 CFLAGS += -Werror
 CFLAGS += -Wmissing-declarations
 CFLAGS += -DUNITY_SUPPORT_64

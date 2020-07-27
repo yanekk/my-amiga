@@ -1,4 +1,6 @@
 #pragma once
+#include <clib/graphics_protos.h>
+
 #define DEPTH 2
 #define WIDTH 320
 #define HEIGHT 200
@@ -20,3 +22,4 @@ struct ViewInfo {
 
 void CreateView(struct ViewInfo* viewInfo);
 void FreeView(struct ViewInfo* viewInfo);
+void RefreshScreen(struct ViewInfo* viewInfo);

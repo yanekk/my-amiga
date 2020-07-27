@@ -4,6 +4,7 @@
 #include <clib/exec_protos.h>
 
 #include "screen.h"
+#include "animtools.h"
 
 void CreateView(struct ViewInfo* viewInfo) {
     InitView(&viewInfo->view);  
@@ -61,13 +62,15 @@ void CreateView(struct ViewInfo* viewInfo) {
         displaymem = (UBYTE *)viewInfo->bitMap.Planes[depth];
         BltClear(displaymem, (viewInfo->bitMap.BytesPerRow * viewInfo->bitMap.Rows), 1L);
     }
-
-    LoadView(&viewInfo->view);
+    setupGelSys(&viewInfo->rastPort, (BYTE)0b11111111);
 }
 
 void FreeView(struct ViewInfo* viewInfo) 
 {
     WaitTOF();
+    
+    cleanupGelSys(viewInfo->rastPort.GelsInfo, &viewInfo->rastPort);
+
     FreeCprList(viewInfo->view.LOFCprList); 
     if(viewInfo->view.SHFCprList)
         FreeCprList(viewInfo->view.SHFCprList);
@@ -90,4 +93,11 @@ void FreeView(struct ViewInfo* viewInfo)
     if(viewInfo->viewExtra) 
         GfxFree(viewInfo->viewExtra); 
     FreeVec(viewInfo);
+}
+
+void RefreshScreen(struct ViewInfo* viewInfo) {
+    SortGList(&viewInfo->rastPort);
+    DrawGList(&viewInfo->rastPort, &viewInfo->viewPort);
+    MrgCop(&viewInfo->view);
+    WaitTOF();
 }

@@ -11,3 +11,4 @@ struct Box {
 };
 
 VOID DrawBox(struct ViewInfo* viewInfo, struct Box rectangle);
+VOID DrawPixel(struct ViewInfo* viewInfo, LONG x, LONG y);
