@@ -123,6 +123,7 @@ if (NULL != (vsprite = (struct VSprite *)AllocMem((LONG)sizeof(struct VSprite), 
                 }
             FreeMem(vsprite->BorderLine, line_size);
             }
+            
         FreeMem(vsprite, (LONG)sizeof(*vsprite));
         }
 return(NULL);

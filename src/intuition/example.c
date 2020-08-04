@@ -5,7 +5,7 @@
 #include <clib/gadtools_protos.h>
 #include <clib/exec_protos.h>
 
-#include "intuition_example.h"
+#include "example.h"
 #include "layout.h"
 
 void RunIntuitionExample() {

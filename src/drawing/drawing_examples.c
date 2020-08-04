@@ -1,6 +1,6 @@
 #include "drawing_examples.h"
 #include "drawing.h"
-#include "screen.h"
+#include "../common/screen.h"
 #include <clib/graphics_protos.h>
 #include <graphics/gfxmacros.h>
 

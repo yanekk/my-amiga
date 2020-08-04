@@ -1,6 +1,6 @@
 #pragma once
 #include <clib/graphics_protos.h>
-#include "screen.h"
+#include "../common/screen.h"
 
 struct Box {
     WORD x;

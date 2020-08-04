@@ -1,5 +1,5 @@
 #pragma once
-#include "screen.h"
+#include "../common/screen.h"
 
 void DrawBoxes(struct ViewInfo * vi);
 void DrawArea(struct  ViewInfo * vi);

@@ -1,8 +1,10 @@
 #include <clib/exec_protos.h>
 #include <stdlib.h>
-#include "animtools.h"
-#include "sprite_examples.h"
-#include "screen.h"
+
+#include "../vendor/animtools.h"
+#include "../common/screen.h"
+
+#include "example.h"
 
 static struct VSprite* InitializeMySprite(struct RastPort* rp, WORD* colors, SHORT x, SHORT y) 
 {

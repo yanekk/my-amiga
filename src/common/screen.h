@@ -20,6 +20,6 @@ struct ViewInfo {
     UWORD colortable[];
 };
 
-void CreateView(struct ViewInfo* viewInfo);
+struct ViewInfo * CreateView();
 void FreeView(struct ViewInfo* viewInfo);
 void RefreshScreen(struct ViewInfo* viewInfo);

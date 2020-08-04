@@ -1,7 +1,7 @@
 #include <clib/exec_protos.h>
 #include <clib/graphics_protos.h>
 #include "drawing.h"
-#include "screen.h"
+#include "../common/screen.h"
 
 VOID DrawBox(struct ViewInfo* viewInfo, struct Box box)
 {

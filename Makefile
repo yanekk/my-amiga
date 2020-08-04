@@ -3,7 +3,7 @@ OBJ_DIR = ./obj
 BIN_DIR = ./bin
 TEST_DIR = ./test
 
-SRC_FILES := $(wildcard $(SRC_DIR)/*.c)
+SRC_FILES := $(wildcard $(SRC_DIR)/*.c) $(wildcard $(SRC_DIR)/**/*.c)
 OBJ_FILES := $(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR)/%.o,$(SRC_FILES))
 
 CC = m68k-amigaos-gcc
@@ -24,22 +24,15 @@ CFLAGS += -noixemul
 EXE = main.exe
 all: $(BIN_DIR)/$(EXE) $(OBJ_FILES)
 
-.PHONY: test
-test: tests.exe
-
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
+	@mkdir -p $(patsubst %/,%,$(sort $(dir $@)))
 	$(CC) $(CFLAGS) -c -o $@ $< 
 
 $(BIN_DIR)/$(EXE): $(OBJ_FILES)
+	@mkdir -p $(BIN_DIR)
 	$(CC) -o $@ $^ $(CFLAGS)
 
 clean:
-	rm $(OBJ_DIR)/*.o $(OBJ_DIR)/*.d $(BIN_DIR)/*.*
-
-run: $(EXE)
-	.\$(EXE)
-.PHONY: all clean run 
-
-TEST_OBJ_FILES := $(filter-out ./obj/main.o,$(OBJ_FILES))
-tests.exe: $(TEST_OBJ_FILES)
-	$(CC) $(CFLAGS) test/vendor/unity.c test/*.c $^ -o $(BIN_DIR)/$@ $(LIBS)
+	rm $(OBJ_DIR) $(BIN_DIR) -r
+rebuild: clean all
+.PHONY: all clean

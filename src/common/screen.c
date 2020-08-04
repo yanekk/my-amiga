@@ -4,9 +4,24 @@
 #include <clib/exec_protos.h>
 
 #include "screen.h"
-#include "animtools.h"
+#include "../vendor/animtools.h"
 
-void CreateView(struct ViewInfo* viewInfo) {
+#define BLACK 0x000
+#define RED 0xf00
+#define GREEN 0x0f0
+#define BLUE 0x00f
+
+#define COLOR_COUNT 32
+
+struct ViewInfo * CreateView() {
+    struct ViewInfo* viewInfo = AllocVec(sizeof(struct ViewInfo) + COLOR_COUNT * sizeof(LONG), MEMF_CLEAR);
+
+    viewInfo->color_count = COLOR_COUNT;
+    viewInfo->colortable[0] = BLACK;
+    viewInfo->colortable[1] = RED;
+    viewInfo->colortable[2] = GREEN;
+    viewInfo->colortable[3] = BLUE;
+
     InitView(&viewInfo->view);  
 
     viewInfo->viewExtra = GfxNew(VIEW_EXTRA_TYPE);
@@ -63,6 +78,7 @@ void CreateView(struct ViewInfo* viewInfo) {
         BltClear(displaymem, (viewInfo->bitMap.BytesPerRow * viewInfo->bitMap.Rows), 1L);
     }
     setupGelSys(&viewInfo->rastPort, (BYTE)0b11111111);
+    return viewInfo;
 }
 
 void FreeView(struct ViewInfo* viewInfo) 

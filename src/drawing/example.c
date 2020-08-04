@@ -5,7 +5,7 @@
 #include <graphics/gfxmacros.h>
 
 #include "drawing_examples.h"
-#include "draw_example.h"
+#include "example.h"
 #include "drawing.h"
 
 void RunDrawExample(struct ViewInfo* vi) {
@@ -15,6 +15,7 @@ void RunDrawExample(struct ViewInfo* vi) {
     UBYTE *tmpbuf = AllocVec (rassize, MEMF_CHIP|MEMF_CLEAR);
 
     struct TmpRas tmpRas = { 0 };
+    
     InitTmpRas(&tmpRas, tmpbuf, rassize);
     rp->TmpRas = &tmpRas;
 
