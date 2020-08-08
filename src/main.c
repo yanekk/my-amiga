@@ -6,11 +6,12 @@
 #include "drawing/example.h"
 #include "intuition/example.h"
 #include "sprite/example.h"
+#include "bob/example.h"
 
 struct GfxBase *GfxBase = NULL;
 struct View* oldView;
 
-static void StoreCurrentView() {
+static void StoreCurrentView() {        
     GfxBase = (struct GfxBase *)OpenLibrary("graphics.library", 0);
     oldView = GfxBase->ActiView;
 }
@@ -24,9 +25,8 @@ static void HaveFunWithGraphics()
 {
     struct ViewInfo* vi = CreateView();
     //RunDrawExample(vi);
-
-    RunVSpriteExample(vi);
-
+    //RunVSpriteExample(vi);
+    RunBobExample(vi);
     FreeView(vi);
 }
 

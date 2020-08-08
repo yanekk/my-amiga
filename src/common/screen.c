@@ -6,21 +6,19 @@
 #include "screen.h"
 #include "../vendor/animtools.h"
 
-#define BLACK 0x000
-#define RED 0xf00
-#define GREEN 0x0f0
-#define BLUE 0x00f
-
 #define COLOR_COUNT 32
 
 struct ViewInfo * CreateView() {
     struct ViewInfo* viewInfo = AllocVec(sizeof(struct ViewInfo) + COLOR_COUNT * sizeof(LONG), MEMF_CLEAR);
 
     viewInfo->color_count = COLOR_COUNT;
-    viewInfo->colortable[0] = BLACK;
-    viewInfo->colortable[1] = RED;
-    viewInfo->colortable[2] = GREEN;
-    viewInfo->colortable[3] = BLUE;
+    viewInfo->colortable[0] = 0x000;
+    viewInfo->colortable[1] = 0x10C;
+    viewInfo->colortable[2] = 0x06C;
+    viewInfo->colortable[3] = 0x0AC;
+    viewInfo->colortable[4] = 0x0FF;
+    viewInfo->colortable[5] = 0x0FF;
+    viewInfo->colortable[6] = 0x0FF;
 
     InitView(&viewInfo->view);  
 
@@ -71,10 +69,9 @@ struct ViewInfo * CreateView() {
     MakeVPort(&viewInfo->view, &viewInfo->viewPort);
     MrgCop(&viewInfo->view);
 
-    UBYTE *displaymem = NULL;
     for(int depth = 0; depth < DEPTH; depth++)
     {
-        displaymem = (UBYTE *)viewInfo->bitMap.Planes[depth];
+        UBYTE * displaymem = (UBYTE *)viewInfo->bitMap.Planes[depth];
         BltClear(displaymem, (viewInfo->bitMap.BytesPerRow * viewInfo->bitMap.Rows), 1L);
     }
     setupGelSys(&viewInfo->rastPort, (BYTE)0b11111111);
