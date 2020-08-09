@@ -1,11 +1,11 @@
 /* animtools.h */
 #ifndef GELTOOLS_H
 #define GELTOOLS_H
-
 /*
 ** These data structures are used by the functions in animtools.c to
 ** allow for an easier interface to the animation system.
 */
+
 
 /* Data structure to hold information for a new VSprite.                */
 typedef struct newVSprite {
@@ -19,6 +19,7 @@ typedef struct newVSprite {
         SHORT           nvs_Flags;      /* vsprite flags                */
         USHORT          nvs_HitMask;    /* Hit mask.                    */
         USHORT          nvs_MeMask;     /* Me mask.                     */
+        WORD           *nvs_CollMask;   /* Collision mask */
         } NEWVSPRITE;
 
 /* Data structure to hold information for a new Bob.                */
@@ -36,6 +37,8 @@ typedef struct newBob {
         SHORT       nb_Y;           /* initial y position           */
         USHORT      nb_HitMask;     /* Hit mask.                    */
         USHORT      nb_MeMask;      /* Me mask.                     */
+        WORD       *nb_ImageShadow; /* Image shadow */
+        short      nb_Identifier;
         } NEWBOB ;
 
 /* Data structure to hold information for a new animation component.       */

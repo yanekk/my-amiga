@@ -1,17 +1,3 @@
 {
-    "files.associations": {
-        "printer.h": "c",
-        "stdio.h": "c",
-        "exec.h": "c",
-        "types.h": "c",
-        "stdint.h": "c",
-        "dos.h": "c",
-        "workbench.h": "c",
-        "intuition.h": "c",
-        "exec_protos.h": "c",
-        "window.h": "c",
-        "menu.h": "c",
-        "border.h": "c",
-        "*.old": "c"
-    }
+    "C_Cpp.default.compilerPath": "c:\\Users\\yanek\\.vscode\\extensions\\bartmanabyss.amiga-debug-1.0.0\\bin\\opt\\bin\\m68k-amiga-elf-gcc.exe"
 }

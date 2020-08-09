@@ -1,9 +1,7 @@
-#include <stdio.h>
-
-#include <clib/alib_protos.h>
-#include <clib/intuition_protos.h>
-#include <clib/gadtools_protos.h>
-#include <clib/exec_protos.h>
+#include <proto/intuition.h>
+#include <proto/gadtools.h>
+#include <proto/exec.h>
+#include <proto/utility.h>
 
 #include "example.h"
 #include "layout.h"
@@ -28,7 +26,7 @@ void RunIntuitionExample() {
         TAG_END);
 
     struct List list;
-    NewList(&list);
+    //NewList(&list);
 
     struct Node node_1 = { .ln_Name = "One" };
     AddTail(&list, &node_1);
@@ -80,22 +78,22 @@ void RunIntuitionExample() {
             if(imsg->Class == IDCMP_GADGETUP) {
                 switch(GADGETID(imsg)) {
                     case GAD_LIST:
-                        printf("List: %d\n", imsg->Code);
+                        //printf("List: %d\n", imsg->Code);
                         break;
                     case GAD_BUTTON:
-                        printf("Button\n");
+                        //printf("Button\n");
                         break;
                     case GAD_CHECKBOX:
-                        printf("Checkbox: %d\n", imsg->Code);
+                        //printf("Checkbox: %d\n", imsg->Code);
                         break;
                     case GAD_CYCLE:
-                        printf("Cycle: %d\n", imsg->Code);
+                        //printf("Cycle: %d\n", imsg->Code);
                         break;
                     case GAD_SLIDER:
-                        printf("Slider: %d\n", imsg->Code);
+                        //printf("Slider: %d\n", imsg->Code);
                         break;
                     case GAD_PALETTE:
-                        printf("Palette: %d\n", imsg->Code);
+                        //printf("Palette: %d\n", imsg->Code);
                         break;
                     case GAD_FILE_REQUESTER:
                         OpenFileRequester();
@@ -111,10 +109,10 @@ void RunIntuitionExample() {
             if(imsg->Class == IDCMP_MOUSEMOVE) {
                 switch(GADGETID(imsg)) {
                     case GAD_SLIDER:
-                        printf("Slider: %d\n", imsg->Code);
+                        //printf("Slider: %d\n", imsg->Code);
                         break;
                     case GAD_SCROLLER:
-                        printf("Scroller: %d\n", imsg->Code);
+                        //printf("Scroller: %d\n", imsg->Code);
                         break;
                 }
             }

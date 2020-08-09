@@ -1,4 +1,4 @@
-#include <clib/gadtools_protos.h>
+#include <proto/gadtools.h>
 struct Layout 
 {
     struct NewGadget newGadget;

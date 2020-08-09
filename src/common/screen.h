@@ -1,5 +1,5 @@
 #pragma once
-#include <clib/graphics_protos.h>
+#include <proto/graphics.h>
 
 #define DEPTH 3
 #define WIDTH 320

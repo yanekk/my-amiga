@@ -1,12 +1,14 @@
-#include <clib/dos_protos.h>
+#include <proto/dos.h>
 #include <graphics/gfxbase.h>
 #include <clib/alib_protos.h>
-#include <clib/exec_protos.h>
+#include <proto/exec.h>
 #include <graphics/gfxmacros.h>
 
 #include "drawing_examples.h"
 #include "example.h"
 #include "drawing.h"
+
+struct DosLibrary* DOSBase;
 
 void RunDrawExample(struct ViewInfo* vi) {
     struct RastPort* rp = &vi->rastPort;

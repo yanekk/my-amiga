@@ -2,15 +2,24 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "(gdb) Attach",
-            "type": "gdb",
-            "request": "attach",
-            "executable": "./bin/main.exe",
-            "target": "127.0.0.1:2345",
-            "remote": true,
-            "cwd": "${workspaceFolder}",
-            "gdbpath": "C:\\cygwin64\\opt\\amiga\\bin\\m68k-amigaos-gdb.exe",
-            "preLaunchTask": "compile"
+            "type": "amiga",
+            "request": "launch",
+            "preLaunchTask": "compile",
+            "name": "Amiga 500",
+            "config": "A500",
+            "program": "${workspaceFolder}/a.mingw",
+            "kickstart": "c:/amiga-dev/winuae/Kickstarts/KICK13.rom",
+            "internalConsoleOptions": "openOnSessionStart"
+        },
+        {
+            "type": "amiga",
+            "request": "launch",
+            "preLaunchTask": "compile",
+            "name": "Amiga 1200",
+            "config": "A1200",
+            "program": "${workspaceFolder}/bin/a.mingw",
+            "kickstart": "C:\\Users\\Public\\Documents\\Amiga Files\\WinUAE\\Kickstart v3.1 rev 40.68 (1993)(Commodore)(A1200).rom",
+            "internalConsoleOptions": "openOnSessionStart"
         }
     ]
 }

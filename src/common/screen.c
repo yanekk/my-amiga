@@ -1,7 +1,6 @@
-#include <stdio.h>
-#include <clib/graphics_protos.h>
+#include <proto/graphics.h>
+#include <proto/exec.h>
 #include <graphics/videocontrol.h>
-#include <clib/exec_protos.h>
 
 #include "screen.h"
 #include "../vendor/animtools.h"
@@ -68,13 +67,13 @@ struct ViewInfo * CreateView() {
 
     MakeVPort(&viewInfo->view, &viewInfo->viewPort);
     MrgCop(&viewInfo->view);
-
+    
     for(int depth = 0; depth < DEPTH; depth++)
     {
-        UBYTE * displaymem = (UBYTE *)viewInfo->bitMap.Planes[depth];
-        BltClear(displaymem, (viewInfo->bitMap.BytesPerRow * viewInfo->bitMap.Rows), 1L);
+        PLANEPTR displaymem = (PLANEPTR)viewInfo->bitMap.Planes[depth];
+        BltClear(displaymem, (ULONG)(viewInfo->bitMap.BytesPerRow * viewInfo->bitMap.Rows), 1L);
     }
-    setupGelSys(&viewInfo->rastPort, (BYTE)0b11111111);
+    setupGelSys(&viewInfo->rastPort, (BYTE)0b11111110);
     return viewInfo;
 }
 

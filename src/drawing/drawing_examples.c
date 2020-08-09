@@ -1,7 +1,7 @@
 #include "drawing_examples.h"
 #include "drawing.h"
 #include "../common/screen.h"
-#include <clib/graphics_protos.h>
+#include <proto/graphics.h>
 #include <graphics/gfxmacros.h>
 
 void DrawBoxes(struct ViewInfo * vi) {

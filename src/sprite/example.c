@@ -1,10 +1,12 @@
-#include <clib/exec_protos.h>
-#include <stdlib.h>
+#include <proto/exec.h>
+#include <graphics/gfxmacros.h>
+#include <hardware/custom.h>
 
 #include "../vendor/animtools.h"
 #include "../common/screen.h"
 
 #include "example.h"
+volatile struct Custom* custom;
 
 static struct VSprite* InitializeMySprite(struct RastPort* rp, WORD* colors, SHORT x, SHORT y) 
 {
@@ -89,7 +91,7 @@ void RunVSpriteExample(struct ViewInfo * vi) {
     struct VSprite* sprites[SPRITES_COUNT] = {};
 
     SHORT x = 0;
-    for(size_t i = 0; i < SPRITES_COUNT; i++) {
+    for(UCOUNT i = 0; i < SPRITES_COUNT; i++) {
         sprites[i] = InitializeMySprite(&vi->rastPort, colors, x, 0);
         x += 20;
     }
@@ -97,7 +99,7 @@ void RunVSpriteExample(struct ViewInfo * vi) {
     RefreshScreen(vi);
     LoadView(&vi->view);
 
-    for(size_t i = 0; i < SPRITES_COUNT; i++) {
+    for(UCOUNT i = 0; i < SPRITES_COUNT; i++) {
         for(int j = 0; j < 16; j++) {
             sprites[i]->Y += 1;
             RefreshScreen(vi);
@@ -105,7 +107,7 @@ void RunVSpriteExample(struct ViewInfo * vi) {
     }
     Delay(1 * TICKS_PER_SECOND);
 
-    for(size_t i = 0; i < SPRITES_COUNT; i++) {
+    for(UCOUNT i = 0; i < SPRITES_COUNT; i++) {
         freeVSprite(sprites[i]);
     }
     FreeVec(colors);

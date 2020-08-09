@@ -1,4 +1,4 @@
-#include <clib/graphics_protos.h>
+#include <proto/graphics.h>
 #include "../common/screen.h"
 
 #define SPRITES_COUNT 7

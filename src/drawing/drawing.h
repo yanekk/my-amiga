@@ -1,5 +1,5 @@
 #pragma once
-#include <clib/graphics_protos.h>
+#include <proto/graphics.h>
 #include "../common/screen.h"
 
 struct Box {

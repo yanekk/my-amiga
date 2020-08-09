@@ -1,5 +1,3 @@
-
-
 /* animtools.c
 **
 ** This file is a collection of tools which are used with the VSprite, Bob and Animation
@@ -21,57 +19,48 @@
 #include <graphics/gfxbase.h>
 #include "animtools.h"
 
-
 /* Setup the GELs system.  After this call is made you can use VSprites, Bobs, AnimComps
 ** and AnimObs.  Note that this links the GelsInfo structure into the RastPort, and calls
 ** InitGels().  It uses information in your RastPort structure to establish boundary collision
 ** defaults at the outer edges of the raster.  This routine sets up for everything - collision
 ** detection and all. You must already have run LoadView before ReadyGelSys is called.
 */
-struct GelsInfo *setupGelSys(struct RastPort *rPort, BYTE reserved)
-{
-struct GelsInfo *gInfo;
-struct VSprite  *vsHead;
-struct VSprite  *vsTail;
+struct GelsInfo *setupGelSys(struct RastPort *rPort, BYTE reserved) {
+  struct VSprite  *vsHead;
+  struct VSprite  *vsTail;
+  struct GelsInfo *gInfo = (struct GelsInfo *)AllocMem(sizeof(struct GelsInfo), MEMF_CLEAR);
+  if(gInfo == NULL) {
+    FreeMem(gInfo, (LONG)sizeof(*gInfo));
+    return 0;
+  }
 
-if (NULL != (gInfo = (struct GelsInfo *)AllocMem(sizeof(struct GelsInfo), MEMF_CLEAR)))
-        {
-        if (NULL != (gInfo->nextLine = (WORD *)AllocMem(sizeof(WORD) * 8, MEMF_CLEAR)))
-            {
-            if (NULL != (gInfo->lastColor = (WORD **)AllocMem(sizeof(LONG) * 8, MEMF_CLEAR)))
-                {
-                if (NULL != (gInfo->collHandler = (struct collTable *)
-                        AllocMem(sizeof(struct collTable),MEMF_CLEAR)))
-                    {
-                    if (NULL != (vsHead = (struct VSprite *)
-                            AllocMem((LONG)sizeof(struct VSprite), MEMF_CLEAR)))
-                        {
-                        if (NULL != (vsTail = (struct VSprite *)
-                                AllocMem(sizeof(struct VSprite), MEMF_CLEAR)))
-                            {
-                            gInfo->sprRsrvd   = reserved;
-                            /* Set left- and top-most to 1 to better keep items */
-                            /* inside the display boundaries.                   */
-                            gInfo->leftmost   = gInfo->topmost    = 1;
-                            gInfo->rightmost  = (rPort->BitMap->BytesPerRow << 3) - 1;
-                            gInfo->bottommost = rPort->BitMap->Rows - 1;
-                            rPort->GelsInfo = gInfo;
-                            InitGels(vsHead, vsTail, gInfo);
-                            return(gInfo);
-                            }
-                        FreeMem(vsHead, (LONG)sizeof(*vsHead));
-                        }
-                    FreeMem(gInfo->collHandler, (LONG)sizeof(struct collTable));
-                    }
-                FreeMem(gInfo->lastColor, (LONG)sizeof(LONG) * 8);
-                }
-            FreeMem(gInfo->nextLine, (LONG)sizeof(WORD) * 8);
+  if (NULL != gInfo) {
+    if (NULL != (gInfo->nextLine = (WORD *)AllocMem(sizeof(WORD) * 8, MEMF_CLEAR))) {
+      if (NULL != (gInfo->lastColor = (WORD **)AllocMem(sizeof(LONG) * 8, MEMF_CLEAR))) {
+        if (NULL != (gInfo->collHandler = (struct collTable *)AllocMem(sizeof(struct collTable),MEMF_CLEAR))) {
+          if (NULL != (vsHead = (struct VSprite *)AllocMem((LONG)sizeof(struct VSprite), MEMF_CLEAR))) {
+            if (NULL != (vsTail = (struct VSprite *)AllocMem(sizeof(struct VSprite), MEMF_CLEAR))) {
+              gInfo->sprRsrvd   = reserved;
+              /* Set left- and top-most to 1 to better keep items */
+              /* inside the display boundaries.                   */
+              gInfo->leftmost   = gInfo->topmost    = 1;
+              gInfo->rightmost  = (rPort->BitMap->BytesPerRow << 3) - 1;
+              gInfo->bottommost = rPort->BitMap->Rows - 1;
+              rPort->GelsInfo = gInfo;
+              InitGels(vsHead, vsTail, gInfo);
+              return(gInfo);
             }
-        FreeMem(gInfo, (LONG)sizeof(*gInfo));
+            FreeMem(vsHead, (LONG)sizeof(*vsHead));
+          }
+          FreeMem(gInfo->collHandler, (LONG)sizeof(struct collTable));
         }
-return(NULL);
+        FreeMem(gInfo->lastColor, (LONG)sizeof(LONG) * 8);
+      }
+      FreeMem(gInfo->nextLine, (LONG)sizeof(WORD) * 8);
+    }    
+  }
+  return(NULL);
 }
-
 
 /* Free all of the stuff allocated by setupGelSys().  Only call this routine if
 ** setupGelSys() returned successfully.  The GelsInfo structure is the one returned
@@ -79,54 +68,49 @@ return(NULL);
 */
 VOID cleanupGelSys(struct GelsInfo *gInfo, struct RastPort *rPort)
 {
-rPort->GelsInfo = NULL;
-FreeMem(gInfo->collHandler, (LONG)sizeof(struct collTable));
-FreeMem(gInfo->lastColor, (LONG)sizeof(LONG) * 8);
-FreeMem(gInfo->nextLine, (LONG)sizeof(WORD) * 8);
-FreeMem(gInfo->gelHead, (LONG)sizeof(struct VSprite));
-FreeMem(gInfo->gelTail, (LONG)sizeof(struct VSprite));
-FreeMem(gInfo, (LONG)sizeof(*gInfo));
+  rPort->GelsInfo = NULL;
+  FreeMem(gInfo->collHandler, (LONG)sizeof(struct collTable));
+  FreeMem(gInfo->lastColor, (LONG)sizeof(LONG) * 8);
+  FreeMem(gInfo->nextLine, (LONG)sizeof(WORD) * 8);
+  FreeMem(gInfo->gelHead, (LONG)sizeof(struct VSprite));
+  FreeMem(gInfo->gelTail, (LONG)sizeof(struct VSprite));
+  FreeMem(gInfo, (LONG)sizeof(*gInfo));
 }
-
 
 /* Create a VSprite from the information given in nVSprite.  Use freeVSprite()
 ** to free this GEL.
 */
 struct VSprite *makeVSprite(NEWVSPRITE *nVSprite)
 {
-struct VSprite *vsprite;
-LONG            line_size;
-LONG            plane_size;
+  struct VSprite *vsprite;
+  LONG            line_size;
+  LONG            plane_size;
 
-line_size = sizeof(WORD) * nVSprite->nvs_WordWidth;
-plane_size = line_size * nVSprite->nvs_LineHeight;
+  line_size = sizeof(WORD) * nVSprite->nvs_WordWidth;
+  plane_size = line_size * nVSprite->nvs_LineHeight;
 
-if (NULL != (vsprite = (struct VSprite *)AllocMem((LONG)sizeof(struct VSprite), MEMF_CLEAR)))
-        {
-        if (NULL != (vsprite->BorderLine = (WORD *)AllocMem(line_size, MEMF_CHIP)))
-            {
-            if (NULL != (vsprite->CollMask = (WORD *)AllocMem(plane_size, MEMF_CHIP)))
-                {
-                vsprite->Y          = nVSprite->nvs_Y;
-                vsprite->X          = nVSprite->nvs_X;
-                vsprite->Flags      = nVSprite->nvs_Flags;
-                vsprite->Width      = nVSprite->nvs_WordWidth;
-                vsprite->Depth      = nVSprite->nvs_ImageDepth;
-                vsprite->Height     = nVSprite->nvs_LineHeight;
-                vsprite->MeMask     = nVSprite->nvs_MeMask;
-                vsprite->HitMask    = nVSprite->nvs_HitMask;
-                vsprite->ImageData  = nVSprite->nvs_Image;
-                vsprite->SprColors  = nVSprite->nvs_ColorSet;
-                vsprite->PlanePick  = vsprite->PlaneOnOff = 0x00;
-                InitMasks(vsprite);
-                return(vsprite);
-                }
-            FreeMem(vsprite->BorderLine, line_size);
-            }
-            
-        FreeMem(vsprite, (LONG)sizeof(*vsprite));
-        }
-return(NULL);
+  if (NULL != (vsprite = (struct VSprite *)AllocMem((LONG)sizeof(struct VSprite), MEMF_CLEAR))) {
+    if (NULL != (vsprite->BorderLine = (WORD *)AllocMem(line_size, MEMF_CHIP))) {
+      if (NULL != (vsprite->CollMask = (WORD *)AllocMem(plane_size, MEMF_CHIP))) {
+        vsprite->Y          = nVSprite->nvs_Y;
+        vsprite->X          = nVSprite->nvs_X;
+        vsprite->Flags      = nVSprite->nvs_Flags;
+        vsprite->Width      = nVSprite->nvs_WordWidth;
+        vsprite->Depth      = nVSprite->nvs_ImageDepth;
+        vsprite->Height     = nVSprite->nvs_LineHeight;
+        vsprite->MeMask     = nVSprite->nvs_MeMask;
+        vsprite->HitMask    = nVSprite->nvs_HitMask;
+        vsprite->ImageData  = nVSprite->nvs_Image;
+        vsprite->SprColors  = nVSprite->nvs_ColorSet;
+        vsprite->PlanePick  = vsprite->PlaneOnOff = 0x00;
+        InitMasks(vsprite);
+        return(vsprite);
+      }
+      FreeMem(vsprite->BorderLine, line_size);
+    }
+    FreeMem(vsprite, (LONG)sizeof(*vsprite));
+  }
+  return(NULL);
 }
 
 
@@ -136,63 +120,54 @@ return(NULL);
 */
 struct Bob *makeBob(NEWBOB *nBob)
 {
-struct Bob         *bob;
-struct VSprite     *vsprite;
-NEWVSPRITE          nVSprite ;
-LONG                rassize;
+  struct Bob         *bob;
+  struct VSprite     *vsprite;
+  NEWVSPRITE          nVSprite;
+  
+  LONG rassize = (LONG)sizeof(UWORD) * nBob->nb_WordWidth * nBob->nb_LineHeight * nBob->nb_RasDepth;
 
-rassize = (LONG)sizeof(UWORD) * nBob->nb_WordWidth * nBob->nb_LineHeight * nBob->nb_RasDepth;
+  if (NULL != (bob = (struct Bob *)AllocMem((LONG)sizeof(struct Bob), MEMF_CLEAR))) {
+    if (NULL != (bob->SaveBuffer = (WORD *)AllocMem(rassize, MEMF_CHIP))) {
+      nVSprite.nvs_WordWidth  = nBob->nb_WordWidth;
+      nVSprite.nvs_LineHeight = nBob->nb_LineHeight;
+      nVSprite.nvs_ImageDepth = nBob->nb_ImageDepth;
+      nVSprite.nvs_Image      = nBob->nb_Image;
+      nVSprite.nvs_X          = nBob->nb_X;
+      nVSprite.nvs_Y          = nBob->nb_Y;
+      nVSprite.nvs_ColorSet   = NULL;
+      nVSprite.nvs_Flags      = nBob->nb_BFlags;
+      /* Push the values into the NEWVSPRITE structure for use in makeVSprite(). */
+      nVSprite.nvs_MeMask     = nBob->nb_MeMask;
+      nVSprite.nvs_HitMask    = nBob->nb_HitMask;
 
-if (NULL != (bob = (struct Bob *)AllocMem((LONG)sizeof(struct Bob), MEMF_CLEAR)))
-        {
-        if (NULL != (bob->SaveBuffer = (WORD *)AllocMem(rassize, MEMF_CHIP)))
-            {
-            nVSprite.nvs_WordWidth  = nBob->nb_WordWidth;
-            nVSprite.nvs_LineHeight = nBob->nb_LineHeight;
-            nVSprite.nvs_ImageDepth = nBob->nb_ImageDepth;
-            nVSprite.nvs_Image      = nBob->nb_Image;
-            nVSprite.nvs_X          = nBob->nb_X;
-            nVSprite.nvs_Y          = nBob->nb_Y;
-            nVSprite.nvs_ColorSet   = NULL;
-            nVSprite.nvs_Flags      = nBob->nb_BFlags;
-            /* Push the values into the NEWVSPRITE structure for use in makeVSprite(). */
-            nVSprite.nvs_MeMask     = nBob->nb_MeMask;
-            nVSprite.nvs_HitMask    = nBob->nb_HitMask;
+      if ((vsprite = makeVSprite(&nVSprite)) != NULL) {
+        vsprite->PlanePick = nBob->nb_PlanePick;
+        vsprite->PlaneOnOff = nBob->nb_PlaneOnOff;
+        vsprite->VSBob   = bob;
+        bob->BobVSprite  = vsprite;
+        bob->ImageShadow = vsprite->CollMask;
+        bob->Flags       = 0;
+        bob->Before      = NULL;
+        bob->After       = NULL;
+        bob->BobComp     = NULL;
 
-            if ((vsprite = makeVSprite(&nVSprite)) != NULL)
-                {
-                vsprite->PlanePick = nBob->nb_PlanePick;
-                vsprite->PlaneOnOff = nBob->nb_PlaneOnOff;
-                vsprite->VSBob   = bob;
-                bob->BobVSprite  = vsprite;
-                bob->ImageShadow = vsprite->CollMask;
-                bob->Flags       = 0;
-                bob->Before      = NULL;
-                bob->After       = NULL;
-                bob->BobComp     = NULL;
-
-                if (nBob->nb_DBuf)
-                    {
-                    if (NULL != (bob->DBuffer = (struct DBufPacket *)
-                            AllocMem((LONG)sizeof(struct DBufPacket), MEMF_CLEAR)))
-                        {
-                        if (NULL != (bob->DBuffer->BufBuffer = (WORD *)AllocMem(rassize, MEMF_CHIP)))
-                            return(bob);
-                        FreeMem(bob->DBuffer, (LONG)sizeof(struct DBufPacket));
-                        }
-                    }
-                else
-                    {
-                    bob->DBuffer = NULL;
+        if (nBob->nb_DBuf) {
+            if (NULL != (bob->DBuffer = (struct DBufPacket *)AllocMem((LONG)sizeof(struct DBufPacket), MEMF_CLEAR))) {
+                if (NULL != (bob->DBuffer->BufBuffer = (WORD *)AllocMem(rassize, MEMF_CHIP)))
                     return(bob);
-                    }
-                freeVSprite(vsprite);
-                }
-            FreeMem(bob->SaveBuffer, rassize);
+                FreeMem(bob->DBuffer, (LONG)sizeof(struct DBufPacket));
             }
-        FreeMem(bob, (LONG)sizeof(*bob));
+        } else {
+          bob->DBuffer = NULL;
+          return(bob);
         }
-return(NULL);
+        freeVSprite(vsprite);
+      }
+      FreeMem(bob->SaveBuffer, rassize);
+    }
+    FreeMem(bob, (LONG)sizeof(*bob));
+  }
+  return(NULL);
 }
 
 
@@ -202,30 +177,28 @@ return(NULL);
 */
 struct AnimComp *makeComp(NEWBOB *nBob, NEWANIMCOMP *nAnimComp)
 {
-struct Bob      *compBob;
-struct AnimComp *aComp;
+  struct Bob      *compBob;
+  struct AnimComp *aComp;
 
-if ((aComp = AllocMem((LONG)sizeof(struct AnimComp),MEMF_CLEAR)) != NULL)
-        {
-        if ((compBob = makeBob(nBob)) != NULL)
-            {
-            compBob->After   = compBob->Before  = NULL;
-            compBob->BobComp = aComp;   /* Link 'em up. */
-            aComp->AnimBob      = compBob;
-            aComp->TimeSet      = nAnimComp->nac_Time; /* Num ticks active. */
-            aComp->YTrans       = nAnimComp->nac_Yt; /* Offset rel to HeadOb */
-            aComp->XTrans       = nAnimComp->nac_Xt;
-            aComp->AnimCRoutine = nAnimComp->nac_Routine;
-            aComp->Flags        = nAnimComp->nac_CFlags;
-            aComp->Timer        = 0;
-            aComp->NextSeq      = aComp->PrevSeq  = NULL;
-            aComp->NextComp     = aComp->PrevComp = NULL;
-            aComp->HeadOb       = NULL;
-            return(aComp);
-            }
-        FreeMem(aComp, (LONG)sizeof(struct AnimComp));
-        }
-return(NULL);
+  if ((aComp = AllocMem((LONG)sizeof(struct AnimComp),MEMF_CLEAR)) != NULL) {
+    if ((compBob = makeBob(nBob)) != NULL) {
+      compBob->After      = compBob->Before  = NULL;
+      compBob->BobComp    = aComp;   /* Link 'em up. */
+      aComp->AnimBob      = (struct Bob*)compBob;
+      aComp->TimeSet      = nAnimComp->nac_Time; /* Num ticks active. */
+      aComp->YTrans       = nAnimComp->nac_Yt; /* Offset rel to HeadOb */
+      aComp->XTrans       = nAnimComp->nac_Xt;
+      aComp->AnimCRoutine = nAnimComp->nac_Routine;
+      aComp->Flags        = nAnimComp->nac_CFlags;
+      aComp->Timer        = 0;
+      aComp->NextSeq      = aComp->PrevSeq  = NULL;
+      aComp->NextComp     = aComp->PrevComp = NULL;
+      aComp->HeadOb       = NULL;
+      return(aComp);
+    }
+    FreeMem(aComp, (LONG)sizeof(struct AnimComp));
+  }
+  return(NULL);
 }
 
 
@@ -290,44 +263,33 @@ return(firstCompInSeq);
 
 
 /* Free the data created by makeVSprite().  Assumes images deallocated elsewhere. */
-VOID freeVSprite(struct VSprite *vsprite)
-{
-LONG    line_size;
-LONG    plane_size;
-
-line_size = (LONG)sizeof(WORD) * vsprite->Width;
-plane_size = line_size * vsprite->Height;
-FreeMem(vsprite->BorderLine, line_size);
-FreeMem(vsprite->CollMask, plane_size);
-FreeMem(vsprite, (LONG)sizeof(*vsprite));
+VOID freeVSprite(struct VSprite *vsprite) {
+  LONG line_size = (LONG)sizeof(WORD) * vsprite->Width;
+  LONG plane_size = line_size * vsprite->Height;
+  FreeMem(vsprite->BorderLine, line_size);
+  FreeMem(vsprite->CollMask, plane_size);
+  FreeMem(vsprite, (LONG)sizeof(*vsprite));
 }
-
 
 /* Free the data created by makeBob().  It's important that rasdepth match the depth you */
 /* passed to makeBob() when this gel was made. Assumes images deallocated elsewhere.     */
-VOID freeBob(struct Bob *bob, LONG rasdepth)
-{
-LONG    rassize =  sizeof(UWORD) * bob->BobVSprite->Width * bob->BobVSprite->Height * rasdepth;
-
-if (bob->DBuffer != NULL)
-        {
-        FreeMem(bob->DBuffer->BufBuffer, rassize);
-        FreeMem(bob->DBuffer, (LONG)sizeof(struct DBufPacket));
-        }
-FreeMem(bob->SaveBuffer, rassize);
-freeVSprite(bob->BobVSprite);
-FreeMem(bob, (LONG)sizeof(*bob));
+VOID freeBob(struct Bob *bob, LONG rasdepth) {
+  LONG rassize = sizeof(UWORD) * bob->BobVSprite->Width * bob->BobVSprite->Height * rasdepth;
+  if (bob->DBuffer != NULL) {
+    FreeMem(bob->DBuffer->BufBuffer, rassize);
+    FreeMem(bob->DBuffer, (LONG)sizeof(struct DBufPacket));
+  }
+  FreeMem(bob->SaveBuffer, rassize);
+  freeVSprite(bob->BobVSprite);
+  FreeMem(bob, (LONG)sizeof(*bob));
 }
-
 
 /* Free the data created by makeComp().  It's important that rasdepth match the depth you */
 /* passed to makeComp() when this GEL was made. Assumes images deallocated elsewhere.    */
-VOID freeComp(struct AnimComp *myComp, LONG rasdepth)
-{
-freeBob(myComp->AnimBob, rasdepth);
-FreeMem(myComp, (LONG)sizeof(struct AnimComp));
+VOID freeComp(struct AnimComp *myComp, LONG rasdepth) {
+  freeBob((struct Bob*)myComp->AnimBob, rasdepth);
+  FreeMem(myComp, (LONG)sizeof(struct AnimComp));
 }
-
 
 /* Free the data created by makeSeq().  Complimentary to makeSeq(), this routine goes through
 ** the NextSeq pointers and frees the Components.  This routine only goes forward through the
@@ -335,39 +297,32 @@ FreeMem(myComp, (LONG)sizeof(struct AnimComp));
 ** be circular (which is guaranteed if you use makeSeq()).  It's important that rasdepth match
 ** the depth you passed to makeSeq() when this gel was made.   Assumes images deallocated elsewhere!
 */
-VOID freeSeq(struct AnimComp *headComp, LONG rasdepth)
-{
-struct AnimComp *curComp;
-struct AnimComp *nextComp;
+VOID freeSeq(struct AnimComp *headComp, LONG rasdepth) {
+  struct AnimComp *curComp;
+  struct AnimComp *nextComp;
 
-/* Break the NextSeq loop, so we get a NULL at the end of the list. */
-headComp->PrevSeq->NextSeq = NULL;
+  /* Break the NextSeq loop, so we get a NULL at the end of the list. */
+  headComp->PrevSeq->NextSeq = NULL;
 
-curComp = headComp;         /* get the start of the list */
-while (curComp != NULL)
-        {
-        nextComp = curComp->NextSeq;
-        freeComp(curComp, rasdepth);
-        curComp = nextComp;
-        }
+  curComp = headComp;         /* get the start of the list */
+  while (curComp != NULL) {
+    nextComp = curComp->NextSeq;
+    freeComp(curComp, rasdepth);
+    curComp = nextComp;
+  }
 }
-
 
 /* Free an animation object (list of sequences).  freeOb() goes through the NextComp
 ** pointers, starting at the AnimObs' HeadComp, and frees every sequence.  It only
 ** goes forward. It then frees the Object itself.  Assumes images deallocated elsewhere!
 */
-VOID freeOb(struct AnimOb *headOb, LONG rasdepth)
-{
-struct AnimComp *curSeq;
-struct AnimComp *nextSeq;
-
-curSeq = headOb->HeadComp;          /* get the start of the list */
-while (curSeq != NULL)
-        {
-        nextSeq = curSeq->NextComp;
-        freeSeq(curSeq, rasdepth);
-        curSeq = nextSeq;
-        }
-FreeMem(headOb, sizeof(struct AnimOb));
+VOID freeOb(struct AnimOb *headOb, LONG rasdepth) {
+  struct AnimComp *nextSeq;
+  struct AnimComp *curSeq = headOb->HeadComp;          /* get the start of the list */
+  while (curSeq != NULL) {
+    nextSeq = curSeq->NextComp;
+    freeSeq(curSeq, rasdepth);
+    curSeq = nextSeq;
+  }
+  FreeMem(headOb, sizeof(struct AnimOb));
 }

@@ -1,11 +1,13 @@
 #include "layout.h"
-#include <clib/gadtools_protos.h>
-#include <clib/intuition_protos.h>
-#include <clib/exec_protos.h>
-#include <clib/asl_protos.h>
+#include <proto/gadtools.h>
+#include <proto/intuition.h>
+#include <proto/exec.h>
+#include <proto/asl.h>
 #include <stdarg.h>
-#include <stdio.h>
 #define MAX_TAGS 32
+
+struct Library* AslBase;
+struct Library* GadToolsBase;
 
 static struct TextAttr Topaz80 = { "topaz.font", 8, 0, 0, };
 struct Layout* CreateLayout() 
@@ -29,7 +31,7 @@ void AddGadgetToLayout(struct Layout* layout, UBYTE kind, GAD_TYPE gadgetId, cha
     layout->newGadget.ng_GadgetID = gadgetId;
     struct TagItem *taglist = AllocVec(MAX_TAGS * sizeof(struct TagItem), MEMF_CLEAR);
 
-    size_t tagCount = 0;
+    SHORT tagCount = 0;
     if(tag1 != 0) {
         va_list ap;
         va_start(ap, tag1);
@@ -71,7 +73,7 @@ void OpenFileRequester()
 
     TAG_END);
     if(AslRequestTags(requester, TAG_END)) {
-        printf("Path: %s, File: %s\n", requester->fr_Drawer, requester->fr_File);
+        //printf("Path: %s, File: %s\n", requester->fr_Drawer, requester->fr_File);
     };
     FreeAslRequest(requester);
 }
@@ -84,7 +86,7 @@ void OpenFontRequester()
         ASL_Width, 150,
     TAG_END);
     if(AslRequestTags(requester, TAG_END)) {
-        printf("Path: %s, File: %s\n", requester->fr_Drawer, requester->fr_File);
+        //printf("Path: %s, File: %s\n", requester->fr_Drawer, requester->fr_File);
     };
     FreeAslRequest(requester);
 }

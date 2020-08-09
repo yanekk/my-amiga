@@ -1,5 +1,5 @@
-#include <clib/exec_protos.h>
-#include <clib/graphics_protos.h>
+#include <proto/exec.h>
+#include <proto/graphics.h>
 #include "drawing.h"
 #include "../common/screen.h"
 

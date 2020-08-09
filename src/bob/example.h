@@ -1,6 +1,6 @@
-#include <clib/graphics_protos.h>
+#include <proto/graphics.h>
 #include "../common/screen.h"
 
-#define BOB_COUNT 2
+#define BALL_COUNT 5
 
 void RunBobExample(struct ViewInfo * viewInfo);
