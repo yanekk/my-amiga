@@ -25,7 +25,7 @@ $(BIN_DIR)/$(OUT).exe: $(BIN_DIR)/$(OUT).elf
 
 $(BIN_DIR)/$(OUT).elf: $(objects) $(OBJ_DIR)/support/gcc8_a_support.o
 	$(info Linking a.mingw.elf)
-	@mkdir $(BIN_DIR)
+	@if not exist "$(BIN_DIR)" mkdir $(BIN_DIR)
 	$(CC) $(CCFLAGS) $(LDFLAGS) $(objects) obj/support/gcc8_a_support.o -o $@
 	@m68k-amiga-elf-objdump --disassemble -S $@ >$(BIN_DIR)/$(OUT).s 
 

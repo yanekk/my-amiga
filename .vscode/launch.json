@@ -7,8 +7,8 @@
             "preLaunchTask": "compile",
             "name": "Amiga 500",
             "config": "A500",
-            "program": "${workspaceFolder}/a.mingw",
-            "kickstart": "c:/amiga-dev/winuae/Kickstarts/KICK13.rom",
+            "program": "${workspaceFolder}/bin/a.mingw",
+            "kickstart": "C:\\Users\\Public\\Documents\\Amiga Files\\WinUAE\\Kickstart v1.3 rev 34.5 (1987)(Commodore)(A500-A1000-A2000-CDTV).rom",
             "internalConsoleOptions": "openOnSessionStart"
         },
         {

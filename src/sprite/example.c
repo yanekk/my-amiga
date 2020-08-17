@@ -1,12 +1,10 @@
 #include <proto/exec.h>
 #include <graphics/gfxmacros.h>
-#include <hardware/custom.h>
 
 #include "../vendor/animtools.h"
 #include "../common/screen.h"
 
 #include "example.h"
-volatile struct Custom* custom;
 
 static struct VSprite* InitializeMySprite(struct RastPort* rp, WORD* colors, SHORT x, SHORT y) 
 {
