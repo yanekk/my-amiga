@@ -59,6 +59,8 @@ static void HaveFunWithGraphics()
 #define IMG_MARGIN ((320 - IMG_W)/2)
 #define IMG_BPL_SIZE (IMG_W / 8)
 #define IMG_BYTE_WIDTH (IMG_BPL_SIZE * BITPLANES)
+#define IMG_SIZE IMG_BYTE_WIDTH * (IMG_H)
+#define IMG_SIZE_WITH_MARGIN IMG_BYTE_WIDTH * (IMG_H + 10)
 
 #define BACKGROUND_COLOR 0x113
 #define LINE_TOP (0x4c-6)
@@ -73,7 +75,7 @@ static void HaveFunWithGraphics()
 #define COPPERLIST_SIZE 512
 
 INCBIN(colors, ".\\\\assets\\\\palette.raw");
-INCBIN_CHIP(image, ".\\\\assets\\\\image.166x72.bltraw")
+INCBIN(imageData, ".\\\\assets\\\\image.166x72.bltraw")
 
 struct copinit *oldcopinit;
 
@@ -152,10 +154,9 @@ static __interrupt void MoveLine()
         lines[i]->vhpos = CPLINE(line+i, LINE_START);
     }
     sprite1->hStart++;
-    sprite1->vStart++;
-    sprite1->vStop++;
+    //sprite1->vStart++;
+    //sprite1->vStop++;
 }
-
 
 static struct Sprite *AllocMySprite(struct Sprite newSprite, const UWORD *spriteData, SHORT spriteDataSize) {
     struct Sprite* spritePtr = (struct Sprite*) AllocMem(sizeof(struct Sprite) + spriteDataSize, MEMF_CHIP);
@@ -181,10 +182,13 @@ int main()
     bitplane[1] = 0xc0ffee;
     bitplane[3] = 0xc0ffee;
 
+    ULONG* image = AllocMem(IMG_SIZE_WITH_MARGIN, MEMF_CHIP | MEMF_CLEAR);
+    CopyMem(imageData, image, IMG_SIZE);
+
     sprite1 = AllocMySprite((struct Sprite) {
-        .vStart = 0x2c,
+        .vStart = 0xAc,
         .hStart = 0x40,
-        .vStop = 0x3c,
+        .vStop = 0xBc,
         .flags = 0x0
     }, mySpriteData, sizeof(mySpriteData));
 
@@ -202,7 +206,7 @@ int main()
     CPMOVE(copPtr, DDFSTOP, 0xd0 - IMG_MARGIN/2);
 
     CPMOVE(copPtr, DIWSTRT, *(UWORD*)((UBYTE[]) { 0x4c, 0x81 }));
-    CPMOVE(copPtr, DIWSTOP, *(UWORD*)((UBYTE[]) { 0x2c, 0x81 }));
+    CPMOVE(copPtr, DIWSTOP, *(UWORD*)((UBYTE[]) { 0x2c, 0xc1 }));
     
     CPMOVE(copPtr, BPLCON0, 0x3200);
     CPMOVE(copPtr, BPLCON1, 0x0000);
@@ -291,6 +295,8 @@ int main()
     custom->cop1lc = oldcopinit;
     FreeMem(copinit, COPPERLIST_SIZE);
     FreeMem(bitplane, BPL_SIZE);
+    FreeMem(image, IMG_SIZE_WITH_MARGIN);
+    
     FreeMySprite(sprite1, sizeof(mySpriteData));
     FreeMySprite(nullSprite, sizeof(nullSpriteData));
 
