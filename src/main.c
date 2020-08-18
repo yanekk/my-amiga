@@ -53,16 +53,27 @@ static void HaveFunWithGraphics()
     FreeView(vi);
 }
 
+#define BITPLANES 3
+#define IMG_W 176
+#define IMG_H 72
+#define IMG_MARGIN ((320 - IMG_W)/2)
+#define IMG_BPL_SIZE (IMG_W / 8)
+#define IMG_BYTE_WIDTH (IMG_BPL_SIZE * BITPLANES)
+
 #define BACKGROUND_COLOR 0x113
-#define LINE_TOP 0x40
-#define LINE_BOTTOM 0xF0
+#define LINE_TOP (0x4c-6)
+#define LINE_BOTTOM (0x4c+IMG_H+1)
 
 #define LINE_START 0x07
 #define LINE_END 0xdf
 
 #define LINES 8
 #define BPL_SIZE 320*256/8
+
 #define COPPERLIST_SIZE 512
+
+INCBIN(colors, ".\\\\assets\\\\palette.raw");
+INCBIN_CHIP(image, ".\\\\assets\\\\image.166x72.bltraw")
 
 struct copinit *oldcopinit;
 
@@ -73,14 +84,61 @@ typedef struct CopperLine {
     WORD colorValue;
 } CopperLine;
 
+struct Sprite {
+    UBYTE vStart;
+    UBYTE hStart;
+    UBYTE vStop;
+    UBYTE flags;
+    WORD data[];
+};
+
 CopperLine* lines[LINES];
-LONG colors[LINES] = { 0x444, 0x777, 0xbbb, 0xfff, 0xbbb, 0x777, 0x444, BACKGROUND_COLOR };
+LONG line_colors[LINES] = { 0x444, 0x777, 0xbbb, 0xfff, 0xbbb, 0x777, 0x444, BACKGROUND_COLOR };
 
 UWORD SystemInts;
+UWORD SystemDMA;
+
 static APTR SystemIrq;
 
-USHORT line = 0xac;
+USHORT line = (LINE_TOP + LINE_BOTTOM)/2;
 WORD line_direction = 1;
+
+static inline ULONG GetVPos() {
+    return (*(volatile ULONG*)0xDFF004) & 0x1ff00;
+}
+
+static void WaitVbl() {
+	while (GetVPos() == (311<<8)) { }
+    while (GetVPos() != (311<<8)) { }
+}
+
+const UWORD __chip mySpriteData[] = {
+    0b0000011111100000, 0b0000000000000000,
+    0b0001100000011000, 0b0000011111100000,
+    0b0010001111000100, 0b0001111111111000,
+    0b0100111001110010, 0b0011111001111100,
+    0b0101100000011010, 0b0011100000011100,
+    0b1001000000001001, 0b0111000000001110,  
+    0b1010000000000101, 0b0110000000000110,  
+    0b1010000000000101, 0b0110000000000110,  
+    0b1010000000000101, 0b0110000000000110,  
+    0b1010000000000101, 0b0110000000000110,    
+    0b1001000000001001, 0b0111000000001110, 
+    0b0101100000011010, 0b0011100000011100,
+    0b0100111001110010, 0b0011111001111100,
+    0b0010001111000100, 0b0001111111111000,
+    0b0001100000011000, 0b0000011111100000,
+    0b0000011111100000, 0b0000000000000000,
+    0, 0
+};
+
+const UWORD __chip nullSpriteData[] = {
+    0, 0,
+    0, 0
+};
+
+struct Sprite *sprite1;
+struct Sprite *nullSprite;
 
 static __interrupt void MoveLine() 
 {
@@ -93,37 +151,83 @@ static __interrupt void MoveLine()
     for(SHORT i = 0; i < LINES; i++) {
         lines[i]->vhpos = CPLINE(line+i, LINE_START);
     }
+    sprite1->hStart++;
+    sprite1->vStart++;
+    sprite1->vStop++;
+}
+
+
+static struct Sprite *AllocMySprite(struct Sprite newSprite, const UWORD *spriteData, SHORT spriteDataSize) {
+    struct Sprite* spritePtr = (struct Sprite*) AllocMem(sizeof(struct Sprite) + spriteDataSize, MEMF_CHIP);
+    spritePtr->vStart = newSprite.vStart;
+    spritePtr->hStart = newSprite.hStart;
+    spritePtr->vStop = newSprite.vStop;
+    spritePtr->flags = newSprite.flags;
+    CopyMem((UWORD*)spriteData, &spritePtr->data, spriteDataSize);
+    return spritePtr;
+}
+
+static void FreeMySprite(struct Sprite *sprite, SHORT spriteDataSize) {
+    FreeMem(sprite, sizeof(struct Sprite) + spriteDataSize);
 }
 
 int main() 
 {
     SysBase = *((struct ExecBase**)4UL);
+    line_colors[LINES-1] = ((UWORD*)colors)[0];
 
     ULONG* bitplane = AllocMem(BPL_SIZE, MEMF_CHIP | MEMF_CLEAR);
     bitplane[0] = 0xc0ffee;
     bitplane[1] = 0xc0ffee;
     bitplane[3] = 0xc0ffee;
 
+    sprite1 = AllocMySprite((struct Sprite) {
+        .vStart = 0x2c,
+        .hStart = 0x40,
+        .vStop = 0x3c,
+        .flags = 0x0
+    }, mySpriteData, sizeof(mySpriteData));
+
+    nullSprite = AllocMySprite((struct Sprite) {
+        .vStart = 0x2a,
+        .hStart = 0x20,
+        .vStop = 0x2b,
+        .flags = 0x0
+    }, nullSpriteData, sizeof(nullSpriteData));
+
     APTR copinit = AllocMem(COPPERLIST_SIZE, MEMF_CHIP);
     UWORD* copPtr = copinit;
 
-    CPMOVE(copPtr, DDFSTRT, 0x38);
-    CPMOVE(copPtr, DDFSTOP, 0xd0);
-    CPMOVE(copPtr, DIWSTRT, 0x2c81);
-    CPMOVE(copPtr, DIWSTOP, 0x2cc1);
+    CPMOVE(copPtr, DDFSTRT, 0x38 + IMG_MARGIN/2);
+    CPMOVE(copPtr, DDFSTOP, 0xd0 - IMG_MARGIN/2);
+
+    CPMOVE(copPtr, DIWSTRT, *(UWORD*)((UBYTE[]) { 0x4c, 0x81 }));
+    CPMOVE(copPtr, DIWSTOP, *(UWORD*)((UBYTE[]) { 0x2c, 0x81 }));
     
-    CPMOVE(copPtr, BPLCON0, 0x1200);
+    CPMOVE(copPtr, BPLCON0, 0x3200);
     CPMOVE(copPtr, BPLCON1, 0x0000);
     CPMOVE(copPtr, BPLCON2, 0x0000);
 
-    CPMOVE(copPtr, BPL1MOD, 0);
-    CPMOVE(copPtr, BPL2MOD, 0);
-    CPMOVE(copPtr, BPL1PTH, (UWORD)(((ULONG)bitplane) >> 16));
-    CPMOVE(copPtr, BPL1PTL, (UWORD)bitplane);
-    
-    CPMOVE(copPtr, COLOR01, 0xFFF);
-    CPMOVE(copPtr, COLOR02, 0xFFF);
-    CPMOVE(copPtr, COLOR03, 0xFFF);
+    CPMOVE(copPtr, BPL1MOD, IMG_BYTE_WIDTH - IMG_BPL_SIZE);
+    CPMOVE(copPtr, BPL2MOD, IMG_BYTE_WIDTH - IMG_BPL_SIZE);
+
+    CPMOVE(copPtr, COLOR17, 0x10C);
+    CPMOVE(copPtr, COLOR18, 0x06C);
+    CPMOVE(copPtr, COLOR19, 0x0AC);
+
+    for(SHORT i = 0; i < BITPLANES; i++) {
+        ULONG bpl = ((ULONG)image) + i * IMG_BPL_SIZE;  
+        CPMOVE_L(copPtr, offsetof(struct Custom, bplpt[i]), bpl);
+    }
+
+    CPMOVE_L(copPtr, SPR1PTH, (ULONG)sprite1);
+    CPMOVE_L(copPtr, SPR2PTH, (ULONG)nullSprite);
+    CPMOVE_L(copPtr, SPR3PTH, (ULONG)nullSprite);
+    CPMOVE_L(copPtr, SPR4PTH, (ULONG)nullSprite);
+    CPMOVE_L(copPtr, SPR5PTH, (ULONG)nullSprite);
+    CPMOVE_L(copPtr, SPR6PTH, (ULONG)nullSprite);
+    CPMOVE_L(copPtr, SPR7PTH, (ULONG)nullSprite);
+
     CPMOVE(copPtr, COLOR00, 0x349);
     CPWAIT(copPtr, CPLINE(0x2b, LINE_START), 0xfffe);
 
@@ -132,11 +236,24 @@ int main()
 
     CPMOVE(copPtr, COLOR00, BACKGROUND_COLOR);
 
+    for(SHORT i = 0; i < 16;i++) {
+        UWORD color = ((UWORD*)colors)[i];
+        CPMOVE(copPtr, offsetof(struct Custom, color[i]), color);
+    }
+
     for(SHORT i = 0; i < LINES; i++) {
         lines[i] = (CopperLine*)copPtr;
         CPWAIT(copPtr, CPLINE(0x80, LINE_START), 0xfffe);
-        CPMOVE(copPtr, COLOR00, colors[i]);
+        CPMOVE(copPtr, COLOR00, line_colors[i]);
     }
+    
+    CPWAIT(copPtr, CPLINE(LINE_BOTTOM+LINES+1, LINE_START), 0xfffe);
+    CPMOVE_L(copPtr, BPL1PTH, (LONG)bitplane);
+    CPMOVE(copPtr, BPL1MOD, 0);
+    CPMOVE(copPtr, BPL2MOD, 0);
+    CPMOVE(copPtr, DDFSTRT, 0x38);
+    CPMOVE(copPtr, DDFSTOP, 0xd0);
+    CPMOVE(copPtr, BPLCON0, 0x1200);
 
     CPWAIT(copPtr, CPLINE(0xff, LINE_END), 0xfffe);
     CPWAIT(copPtr, CPLINE(0x2c, LINE_START), 0xfffe);
@@ -146,14 +263,18 @@ int main()
     CPMOVE(copPtr, COLOR00, 0x349);
     CPEND(copPtr);
 
+    // kill system
     GfxBase = (struct GfxBase *)OpenLibrary(GRAPHICSNAME, 0);
     oldcopinit = GfxBase->copinit;
 
     CloseLibrary((struct Library*)GfxBase);
-
+    
     SystemInts = custom->intenar;
+    SystemDMA = custom->dmaconr;
     SystemIrq = GetInterruptHandler(); //store interrupt register
 
+    // initialize custom values
+    WaitVbl();
     SetInterruptHandler((APTR)MoveLine);
 
     custom->intena = INTF_SETCLR | INTF_VERTB;
@@ -163,15 +284,20 @@ int main()
 
 	while(ciaa->ciapra & CIAF_GAMEPORT0) // active low
 	{
-
+        // interrupt handler moves the line on the screen
 	}
-    
+
+    // restore system
     custom->cop1lc = oldcopinit;
-    FreeMem(bitplane, BPL_SIZE);
     FreeMem(copinit, COPPERLIST_SIZE);
+    FreeMem(bitplane, BPL_SIZE);
+    FreeMySprite(sprite1, sizeof(mySpriteData));
+    FreeMySprite(nullSprite, sizeof(nullSpriteData));
 
     custom->intreq = 0x7fff;
     custom->intena = SystemInts | 0xc000;
+    custom->dmacon = SystemDMA | 0x8000;
+    SetInterruptHandler(SystemIrq);
 
     return 0;
     /*
