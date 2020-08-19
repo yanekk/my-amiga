@@ -69,7 +69,9 @@ static void HaveFunWithGraphics()
 #define LINE_END 0xdf
 
 #define LINES 8
-#define BPL_SIZE 320*256/8
+#define BPL_W 320
+#define BPL_H 256
+#define BPL_SIZE BPL_W*BPL_H/8
 
 #define COPPERLIST_SIZE 512
 
@@ -176,18 +178,21 @@ int main()
     SysBase = *((struct ExecBase**)4UL);
     line_colors[LINES-1] = ((UWORD*)colors)[0];
 
-    ULONG* bitplane = AllocMem(BPL_SIZE, MEMF_CHIP | MEMF_CLEAR);
-    bitplane[0] = 0xc0ffee;
-    bitplane[1] = 0xc0ffee;
-    bitplane[3] = 0xc0ffee;
+    UWORD* bitplane = AllocMem(BPL_SIZE, MEMF_CHIP | MEMF_CLEAR);
 
-    ULONG* image = AllocMem(IMG_SIZE_WITH_MARGIN, MEMF_CHIP | MEMF_CLEAR);
+    UWORD c = 0;
+    for(ULONG i = 0; i < BPL_SIZE/2; i++) {
+        bitplane[i] = c;
+        c++;
+    }
+
+    UWORD* image = AllocMem(IMG_SIZE_WITH_MARGIN, MEMF_CHIP | MEMF_CLEAR);
     CopyMem(imageData, image, IMG_SIZE);
 
     sprite1 = AllocMySprite((struct Sprite) {
-        .vStart = 0xAc,
+        .vStart = 0xac,
         .hStart = 0x40,
-        .vStop = 0xBc,
+        .vStop = 0xbc,
         .flags = 0x0
     }, mySpriteData, sizeof(mySpriteData));
 
@@ -208,7 +213,7 @@ int main()
     CPMOVE(copPtr, DIWSTRT, 0x4c81);
     CPMOVE(copPtr, DIWSTOP, 0x2cc1);
     
-    CPMOVE(copPtr, BPLCON0, 0x3200);
+    CPMOVE(copPtr, BPLCON0, 0x3200);    // three bitplanes
     CPMOVE(copPtr, BPLCON1, 0x0000);
     CPMOVE(copPtr, BPLCON2, 0x0000);
 
@@ -261,7 +266,7 @@ int main()
     CPMOVE(copPtr, BPL2MOD, 0);
     CPMOVE(copPtr, DDFSTRT, 0x38);
     CPMOVE(copPtr, DDFSTOP, 0xd0);
-    CPMOVE(copPtr, BPLCON0, 0x1200);
+    CPMOVE(copPtr, BPLCON0, 0x1200);    // one bitplane
 
     // bottom line
     CPWAIT(copPtr, CPLINE(0xff, LINE_END), 0xfffe);
@@ -290,6 +295,23 @@ int main()
     custom->intreq = INTF_VERTB;
     custom->cop1lc = (ULONG)copinit;
 	custom->dmacon = DMAF_SETCLR | DMAF_ALL;
+
+    while(custom->dmacon & DMAF_BLTDONE) { }
+
+    UWORD bltx = 48;
+    UWORD blty = 30;
+    UWORD blth = 50;
+    UWORD bltw = 224;
+
+    UWORD offset = (blty * (BPL_W/8) + bltx/8);
+
+    *(LONG*)(&custom->bltcon0) = 0x01000000;
+
+    APTR bitplane_offset = (APTR)((ULONG)bitplane + offset);
+
+    custom->bltdpt = bitplane_offset;
+    custom->bltdmod = (BPL_W - bltw)/8;
+    custom->bltsize = (UWORD)(blth * 64 + bltw/16);
 
 	while(ciaa->ciapra & CIAF_GAMEPORT0) // active low
 	{
