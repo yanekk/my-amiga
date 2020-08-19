@@ -62,7 +62,6 @@ static void HaveFunWithGraphics()
 #define IMG_SIZE IMG_BYTE_WIDTH * (IMG_H)
 #define IMG_SIZE_WITH_MARGIN IMG_BYTE_WIDTH * (IMG_H + 10)
 
-#define BACKGROUND_COLOR 0x113
 #define LINE_TOP (0x4c-6)
 #define LINE_BOTTOM (0x4c+IMG_H+1)
 
@@ -95,7 +94,7 @@ struct Sprite {
 };
 
 CopperLine* lines[LINES];
-LONG line_colors[LINES] = { 0x444, 0x777, 0xbbb, 0xfff, 0xbbb, 0x777, 0x444, BACKGROUND_COLOR };
+LONG line_colors[LINES] = { 0x444, 0x777, 0xbbb, 0xfff, 0xbbb, 0x777, 0x444, 0x000 };
 
 UWORD SystemInts;
 UWORD SystemDMA;
@@ -202,11 +201,12 @@ int main()
     APTR copinit = AllocMem(COPPERLIST_SIZE, MEMF_CHIP);
     UWORD* copPtr = copinit;
 
+    // logo
     CPMOVE(copPtr, DDFSTRT, 0x38 + IMG_MARGIN/2);
     CPMOVE(copPtr, DDFSTOP, 0xd0 - IMG_MARGIN/2);
 
-    CPMOVE(copPtr, DIWSTRT, *(UWORD*)((UBYTE[]) { 0x4c, 0x81 }));
-    CPMOVE(copPtr, DIWSTOP, *(UWORD*)((UBYTE[]) { 0x2c, 0xc1 }));
+    CPMOVE(copPtr, DIWSTRT, 0x4c81);
+    CPMOVE(copPtr, DIWSTOP, 0x2cc1);
     
     CPMOVE(copPtr, BPLCON0, 0x3200);
     CPMOVE(copPtr, BPLCON1, 0x0000);
@@ -215,14 +215,20 @@ int main()
     CPMOVE(copPtr, BPL1MOD, IMG_BYTE_WIDTH - IMG_BPL_SIZE);
     CPMOVE(copPtr, BPL2MOD, IMG_BYTE_WIDTH - IMG_BPL_SIZE);
 
-    CPMOVE(copPtr, COLOR17, 0x10C);
-    CPMOVE(copPtr, COLOR18, 0x06C);
-    CPMOVE(copPtr, COLOR19, 0x0AC);
-
     for(SHORT i = 0; i < BITPLANES; i++) {
         ULONG bpl = ((ULONG)image) + i * IMG_BPL_SIZE;  
         CPMOVE_L(copPtr, offsetof(struct Custom, bplpt[i]), bpl);
     }
+
+    for(SHORT i = 0; i < 16;i++) {
+        UWORD color = ((UWORD*)colors)[i];
+        CPMOVE(copPtr, offsetof(struct Custom, color[i]), color);
+    }
+
+    // sprite
+    CPMOVE(copPtr, COLOR17, 0x10C);
+    CPMOVE(copPtr, COLOR18, 0x06C);
+    CPMOVE(copPtr, COLOR19, 0x0AC);
 
     CPMOVE_L(copPtr, SPR1PTH, (ULONG)sprite1);
     CPMOVE_L(copPtr, SPR2PTH, (ULONG)nullSprite);
@@ -232,25 +238,23 @@ int main()
     CPMOVE_L(copPtr, SPR6PTH, (ULONG)nullSprite);
     CPMOVE_L(copPtr, SPR7PTH, (ULONG)nullSprite);
 
+    // top line
     CPMOVE(copPtr, COLOR00, 0x349);
     CPWAIT(copPtr, CPLINE(0x2b, LINE_START), 0xfffe);
 
     CPMOVE(copPtr, COLOR00, 0x56b);
     CPWAIT(copPtr, CPLINE(0x2c, LINE_START), 0xfffe);
 
-    CPMOVE(copPtr, COLOR00, BACKGROUND_COLOR);
+    CPMOVE(copPtr, COLOR00, ((UWORD*)colors)[0]);
 
-    for(SHORT i = 0; i < 16;i++) {
-        UWORD color = ((UWORD*)colors)[i];
-        CPMOVE(copPtr, offsetof(struct Custom, color[i]), color);
-    }
-
+    // copper line
     for(SHORT i = 0; i < LINES; i++) {
         lines[i] = (CopperLine*)copPtr;
         CPWAIT(copPtr, CPLINE(0x80, LINE_START), 0xfffe);
         CPMOVE(copPtr, COLOR00, line_colors[i]);
     }
-    
+
+    // second bitplane
     CPWAIT(copPtr, CPLINE(LINE_BOTTOM+LINES+1, LINE_START), 0xfffe);
     CPMOVE_L(copPtr, BPL1PTH, (LONG)bitplane);
     CPMOVE(copPtr, BPL1MOD, 0);
@@ -259,6 +263,7 @@ int main()
     CPMOVE(copPtr, DDFSTOP, 0xd0);
     CPMOVE(copPtr, BPLCON0, 0x1200);
 
+    // bottom line
     CPWAIT(copPtr, CPLINE(0xff, LINE_END), 0xfffe);
     CPWAIT(copPtr, CPLINE(0x2c, LINE_START), 0xfffe);
     CPMOVE(copPtr, COLOR00, 0x56c);
