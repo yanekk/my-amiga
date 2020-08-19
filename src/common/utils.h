@@ -23,3 +23,5 @@
 #define CPLINE(h, v) ((v) | (h) << 8)
 
 #define __chip __attribute__((section (".MEMF_CHIP")))
+
+#define LONG_PTR(ptr) *(LONG*)(&ptr)

@@ -144,6 +144,39 @@ const UWORD __chip nullSpriteData[] = {
 struct Sprite *sprite1;
 struct Sprite *nullSprite;
 
+UWORD *bitplane;
+static void Scroll() {
+    /*  #######
+        blitter
+        ####### */
+    
+    UWORD bltx = 48;
+    UWORD blty = 30;
+    UWORD offset = (blty * (BPL_W/8) + bltx/8);
+
+    UWORD blth = 50;
+    UWORD bltw = 224 / 16;
+
+    UWORD corner = (blth-1) * (BPL_W/8) + bltw*2 - 2;
+
+    while(custom->dmaconr & DMAF_BLTDONE) { }
+    LONG_PTR(custom->bltcon0) = 0x19f00002;
+    LONG_PTR(custom->bltafwm) = 0xffffffff;
+   
+    APTR bitplane_offset = (APTR)((ULONG)bitplane + offset + corner);
+
+    custom->bltapt = bitplane_offset;
+    custom->bltdpt = bitplane_offset;
+    
+    custom->bltdmod = (BPL_W - 224)/8; //bltskip
+    custom->bltamod = (BPL_W - 224)/8; //bltskip
+    custom->bltsize = (UWORD)(blth * 64 + bltw);
+    
+    /* ###########
+       end blitter
+       ########### */
+}
+
 static __interrupt void MoveLine() 
 {
     custom->intreq = INTF_VERTB;
@@ -156,6 +189,7 @@ static __interrupt void MoveLine()
         lines[i]->vhpos = CPLINE(line+i, LINE_START);
     }
     sprite1->hStart++;
+    Scroll();
     //sprite1->vStart++;
     //sprite1->vStop++;
 }
@@ -174,12 +208,13 @@ static void FreeMySprite(struct Sprite *sprite, SHORT spriteDataSize) {
     FreeMem(sprite, sizeof(struct Sprite) + spriteDataSize);
 }
 
+
 int main() 
 {
     SysBase = *((struct ExecBase**)4UL);
     line_colors[LINES-1] = ((UWORD*)colors)[0];
 
-    UWORD* bitplane = AllocMem(BPL_SIZE, MEMF_CHIP | MEMF_CLEAR);
+    bitplane = AllocMem(BPL_SIZE, MEMF_CHIP | MEMF_CLEAR);
 
     UWORD c = 0;
     for(ULONG i = 0; i < BPL_SIZE/2; i++) {
@@ -297,33 +332,7 @@ int main()
     custom->cop1lc = (ULONG)copinit;
 	custom->dmacon = DMAF_SETCLR | DMAF_ALL;
 
-    /*  #######
-        blitter
-        ####### */
-    while(custom->dmacon & DMAF_BLTDONE) { }
-
-    UWORD bltx = 48;
-    UWORD blty = 30;
-    UWORD blth = 50;
-    UWORD bltw = 224;
-
-    UWORD offset = (blty * (BPL_W/8) + bltx/8);
-
-    *(LONG*)(&custom->bltcon0) = 0xf9f00000;
-    *(LONG*)(&custom->bltafwm) = 0xffffffff;
-
-    APTR bitplane_offset = (APTR)((ULONG)bitplane + offset);
-
-    custom->bltapt = bitplane_offset;
-    custom->bltdpt = bitplane_offset;
-    
-    custom->bltdmod = (BPL_W - bltw)/8; //bltskip
-    custom->bltamod = (BPL_W - bltw)/8; //bltskip
-    custom->bltsize = (UWORD)(blth * 64 + bltw/16);
-    
-    /* ###########
-       end blitter
-       ########### */
+    Scroll(bitplane);
 
 	while(ciaa->ciapra & CIAF_GAMEPORT0) // active low
 	{
