@@ -18,6 +18,7 @@
 #include <intuition/intuitionbase.h>
 #include <hardware/adkbits.h>
 #include <hardware/intbits.h>
+
 #include <exec/execbase.h>
 #include <graphics/gfxbase.h>
 
@@ -296,6 +297,9 @@ int main()
     custom->cop1lc = (ULONG)copinit;
 	custom->dmacon = DMAF_SETCLR | DMAF_ALL;
 
+    /*  #######
+        blitter
+        ####### */
     while(custom->dmacon & DMAF_BLTDONE) { }
 
     UWORD bltx = 48;
@@ -305,13 +309,21 @@ int main()
 
     UWORD offset = (blty * (BPL_W/8) + bltx/8);
 
-    *(LONG*)(&custom->bltcon0) = 0x01000000;
+    *(LONG*)(&custom->bltcon0) = 0xf9f00000;
+    *(LONG*)(&custom->bltafwm) = 0xffffffff;
 
     APTR bitplane_offset = (APTR)((ULONG)bitplane + offset);
 
+    custom->bltapt = bitplane_offset;
     custom->bltdpt = bitplane_offset;
-    custom->bltdmod = (BPL_W - bltw)/8;
+    
+    custom->bltdmod = (BPL_W - bltw)/8; //bltskip
+    custom->bltamod = (BPL_W - bltw)/8; //bltskip
     custom->bltsize = (UWORD)(blth * 64 + bltw/16);
+    
+    /* ###########
+       end blitter
+       ########### */
 
 	while(ciaa->ciapra & CIAF_GAMEPORT0) // active low
 	{
