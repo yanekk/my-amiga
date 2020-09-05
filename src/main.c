@@ -54,14 +54,26 @@ static void HaveFunWithGraphics()
     FreeView(vi);
 }
 
-#define BITPLANES 3
+#define SCREEN_BPL_W 320
+#define SCREEN_BPL_H 256
+#define SCREEN_BITPLANES 3
+#define SCREEN_BPL_SIZE (SCREEN_BPL_W/8)
+#define SCREEN_BYTE_WIDTH (SCREEN_BPL_SIZE * SCREEN_BITPLANES)
+#define SCREEN_SIZE SCREEN_BPL_W*SCREEN_BPL_H/8
+
 #define IMG_W 176
 #define IMG_H 72
-#define IMG_MARGIN ((320 - IMG_W)/2)
+#define IMG_BITPLANES 3
+#define IMG_MARGIN ((SCREEN_BPL_W - IMG_W)/2)
 #define IMG_BPL_SIZE (IMG_W / 8)
-#define IMG_BYTE_WIDTH (IMG_BPL_SIZE * BITPLANES)
+#define IMG_BYTE_WIDTH (IMG_BPL_SIZE * IMG_BITPLANES)
 #define IMG_SIZE IMG_BYTE_WIDTH * (IMG_H)
-#define IMG_SIZE_WITH_MARGIN IMG_BYTE_WIDTH * (IMG_H + 10)
+#define IMG_SIZE_WITH_MARGIN (IMG_SIZE + IMG_BYTE_WIDTH * 10)
+
+#define FONT_W 288
+#define FONT_H 82
+#define FONT_BPL_SIZE (FONT_W / 8)
+#define FONT_COLORS 8
 
 #define LINE_TOP (0x4c-6)
 #define LINE_BOTTOM (0x4c+IMG_H+1)
@@ -70,14 +82,14 @@ static void HaveFunWithGraphics()
 #define LINE_END 0xdf
 
 #define LINES 8
-#define BPL_W 320
-#define BPL_H 256
-#define BPL_SIZE BPL_W*BPL_H/8
 
 #define COPPERLIST_SIZE 512
 
-INCBIN(colors, ".\\\\assets\\\\palette.raw");
 INCBIN(imageData, ".\\\\assets\\\\image.166x72.bltraw")
+INCBIN(imageColors, ".\\\\assets\\\\palette.raw");
+
+INCBIN_CHIP(fontData, ".\\\\assets\\\\font.288x82.bltraw")
+INCBIN(fontColors, ".\\\\assets\\\\font-palette.raw");
 
 struct copinit *oldcopinit;
 
@@ -144,33 +156,49 @@ const UWORD __chip nullSpriteData[] = {
 struct Sprite *sprite1;
 struct Sprite *nullSprite;
 
-UWORD *bitplane;
+UWORD *bottomScreen;
 static void Scroll() {
     /*  #######
         blitter
         ####### */
     
+    WORD scrollY = 100;
+
+    WaitBlit();
+
+    LONG_PTR(custom->bltcon0) = 0x09f00000;
+    LONG_PTR(custom->bltafwm) = 0xffffffff;
+   
+    custom->bltapt = (APTR)fontData;
+    custom->bltdpt = (APTR)((ULONG)bottomScreen + (SCREEN_BPL_SIZE*3) * scrollY);
+    
+    custom->bltamod = FONT_BPL_SIZE - 2; 
+    custom->bltdmod = SCREEN_BPL_SIZE - 2;
+    custom->bltsize = (UWORD)(16*3 * 64 + 1);
+
+    WaitBlit();
+    
     UWORD bltx = 48;
     UWORD blty = 30;
-    UWORD offset = (blty * (BPL_W/8) + bltx/8);
+    UWORD offset = blty * (SCREEN_BPL_SIZE*3) + (bltx/8);
 
     UWORD blth = 50;
     UWORD bltw = 224 / 16;
+    UWORD bltskip = (SCREEN_BPL_W - 224)/8;
 
-    UWORD corner = (blth-1) * (BPL_W/8) + bltw*2 - 2;
+    UWORD corner = (blth-1) * (SCREEN_BPL_SIZE*3) + (bltw*2) - 2;
 
-    while(custom->dmaconr & DMAF_BLTDONE) { }
     LONG_PTR(custom->bltcon0) = 0x19f00002;
     LONG_PTR(custom->bltafwm) = 0xffffffff;
    
-    APTR bitplane_offset = (APTR)((ULONG)bitplane + offset + corner);
+    APTR bitplane_offset = (APTR)((ULONG)bottomScreen + offset + corner);
 
     custom->bltapt = bitplane_offset;
     custom->bltdpt = bitplane_offset;
     
-    custom->bltdmod = (BPL_W - 224)/8; //bltskip
-    custom->bltamod = (BPL_W - 224)/8; //bltskip
-    custom->bltsize = (UWORD)(blth * 64 + bltw);
+    custom->bltdmod = bltskip;
+    custom->bltamod = bltskip; 
+    custom->bltsize = (UWORD)((blth*3) * 64 + bltw);
     
     /* ###########
        end blitter
@@ -212,15 +240,8 @@ static void FreeMySprite(struct Sprite *sprite, SHORT spriteDataSize) {
 int main() 
 {
     SysBase = *((struct ExecBase**)4UL);
-    line_colors[LINES-1] = ((UWORD*)colors)[0];
-
-    bitplane = AllocMem(BPL_SIZE, MEMF_CHIP | MEMF_CLEAR);
-
-    UWORD c = 0;
-    for(ULONG i = 0; i < BPL_SIZE/2; i++) {
-        bitplane[i] = c;
-        c++;
-    }
+    line_colors[LINES-1] = ((UWORD*)imageColors)[0];
+    //((UWORD*)fontColors)[0] = ((UWORD*)imageColors)[0];
 
     UWORD* image = AllocMem(IMG_SIZE_WITH_MARGIN, MEMF_CHIP | MEMF_CLEAR);
     CopyMem(imageData, image, IMG_SIZE);
@@ -243,6 +264,7 @@ int main()
     UWORD* copPtr = copinit;
 
     // logo
+
     CPMOVE(copPtr, DDFSTRT, 0x38 + IMG_MARGIN/2);
     CPMOVE(copPtr, DDFSTOP, 0xd0 - IMG_MARGIN/2);
 
@@ -256,13 +278,13 @@ int main()
     CPMOVE(copPtr, BPL1MOD, IMG_BYTE_WIDTH - IMG_BPL_SIZE);
     CPMOVE(copPtr, BPL2MOD, IMG_BYTE_WIDTH - IMG_BPL_SIZE);
 
-    for(SHORT i = 0; i < BITPLANES; i++) {
+    for(SHORT i = 0; i < IMG_BITPLANES; i++) {
         ULONG bpl = ((ULONG)image) + i * IMG_BPL_SIZE;  
         CPMOVE_L(copPtr, offsetof(struct Custom, bplpt[i]), bpl);
     }
 
     for(SHORT i = 0; i < 16;i++) {
-        UWORD color = ((UWORD*)colors)[i];
+        UWORD color = ((UWORD*)imageColors)[i];
         CPMOVE(copPtr, offsetof(struct Custom, color[i]), color);
     }
 
@@ -286,7 +308,7 @@ int main()
     CPMOVE(copPtr, COLOR00, 0x56b);
     CPWAIT(copPtr, CPLINE(0x2c, LINE_START), 0xfffe);
 
-    CPMOVE(copPtr, COLOR00, ((UWORD*)colors)[0]);
+    CPMOVE(copPtr, COLOR00, ((UWORD*)imageColors)[0]);
 
     // copper line
     for(SHORT i = 0; i < LINES; i++) {
@@ -295,14 +317,33 @@ int main()
         CPMOVE(copPtr, COLOR00, line_colors[i]);
     }
 
-    // second bitplane
+    bottomScreen = AllocMem(SCREEN_SIZE * SCREEN_BITPLANES, MEMF_CHIP | MEMF_CLEAR);
+
+    UWORD c = 0;
+    for(ULONG i = 0; i < SCREEN_SIZE/2; i++) {
+        bottomScreen[i] = c;
+        c++;
+    }
+
+    // second screen
     CPWAIT(copPtr, CPLINE(LINE_BOTTOM+LINES+1, LINE_START), 0xfffe);
-    CPMOVE_L(copPtr, BPL1PTH, (LONG)bitplane);
-    CPMOVE(copPtr, BPL1MOD, 0);
-    CPMOVE(copPtr, BPL2MOD, 0);
+
+    for(SHORT i = 0; i < FONT_COLORS;i++) {
+        UWORD color = ((UWORD*)fontColors)[i];
+        CPMOVE(copPtr, offsetof(struct Custom, color[i]), color);
+    }
+
+    for(SHORT i = 0; i < SCREEN_BITPLANES; i++) {
+        ULONG bpl = ((ULONG)bottomScreen) + i * SCREEN_BPL_SIZE;  
+        CPMOVE_L(copPtr, offsetof(struct Custom, bplpt[i]), bpl);
+    }
+
+    CPMOVE(copPtr, BPL1MOD, SCREEN_BYTE_WIDTH - SCREEN_BPL_SIZE);
+    CPMOVE(copPtr, BPL2MOD, SCREEN_BYTE_WIDTH - SCREEN_BPL_SIZE);
+    
     CPMOVE(copPtr, DDFSTRT, 0x38);
     CPMOVE(copPtr, DDFSTOP, 0xd0);
-    CPMOVE(copPtr, BPLCON0, 0x1200);    // one bitplane
+    CPMOVE(copPtr, BPLCON0, 0x3200);    // three bitplanes
 
     // bottom line
     CPWAIT(copPtr, CPLINE(0xff, LINE_END), 0xfffe);
@@ -332,7 +373,7 @@ int main()
     custom->cop1lc = (ULONG)copinit;
 	custom->dmacon = DMAF_SETCLR | DMAF_ALL;
 
-    Scroll(bitplane);
+    Scroll(bottomScreen);
 
 	while(ciaa->ciapra & CIAF_GAMEPORT0) // active low
 	{
@@ -342,7 +383,7 @@ int main()
     // restore system
     custom->cop1lc = oldcopinit;
     FreeMem(copinit, COPPERLIST_SIZE);
-    FreeMem(bitplane, BPL_SIZE);
+    FreeMem(bottomScreen, SCREEN_SIZE);
     FreeMem(image, IMG_SIZE_WITH_MARGIN);
     
     FreeMySprite(sprite1, sizeof(mySpriteData));
