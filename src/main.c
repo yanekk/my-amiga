@@ -29,6 +29,7 @@
 #include "bob/example.h"
 #include "common/custom_chip.h"
 #include "system/interrupts.h"
+#include <string.h>
 
 struct GfxBase *GfxBase = NULL;
 struct IntuitionBase *IntuitionBase = NULL;
@@ -54,17 +55,20 @@ static void HaveFunWithGraphics()
     FreeView(vi);
 }
 
-#define SCREEN_BPL_W 320
+#define SCREEN_BPL_W 352
 #define SCREEN_BPL_H 256
 #define SCREEN_BITPLANES 3
 #define SCREEN_BPL_SIZE (SCREEN_BPL_W/8)
 #define SCREEN_BYTE_WIDTH (SCREEN_BPL_SIZE * SCREEN_BITPLANES)
 #define SCREEN_SIZE SCREEN_BPL_W*SCREEN_BPL_H/8
 
+#define VIEWPORT_W 320
+#define VIEWPORT_H SCREEN_BPL_H
+
 #define IMG_W 176
 #define IMG_H 72
 #define IMG_BITPLANES 3
-#define IMG_MARGIN ((SCREEN_BPL_W - IMG_W)/2)
+#define IMG_MARGIN ((VIEWPORT_W - IMG_W)/2)
 #define IMG_BPL_SIZE (IMG_W / 8)
 #define IMG_BYTE_WIDTH (IMG_BPL_SIZE * IMG_BITPLANES)
 #define IMG_SIZE IMG_BYTE_WIDTH * (IMG_H)
@@ -74,6 +78,11 @@ static void HaveFunWithGraphics()
 #define FONT_H 82
 #define FONT_BPL_SIZE (FONT_W / 8)
 #define FONT_COLORS 8
+#define FONT_LETTER_WIDTH 16
+#define FONT_LETTER_HEIGHT 16
+#define FONT_LETTERS_PER_LINE 18
+
+#define SCROLL_SPEED 2
 
 #define LINE_TOP (0x4c-6)
 #define LINE_BOTTOM (0x4c+IMG_H+1)
@@ -156,49 +165,67 @@ const UWORD __chip nullSpriteData[] = {
 struct Sprite *sprite1;
 struct Sprite *nullSprite;
 
+UWORD scrollCounter = 0;
 UWORD *bottomScreen;
+
+const char* letters = "GREETINGS FROM THE OLD AMIGA COMPUTER!   ";
+USHORT letterIndex = 0;
+
 static void Scroll() {
+    WaitBlit();
+
+    SHORT letterCount = strlen(letters);
     /*  #######
         blitter
         ####### */
-    
-    WORD scrollY = 100;
+    if(scrollCounter == 0) {
+        UWORD plotY = 30;
+        UWORD plotX = SCREEN_BPL_W - FONT_LETTER_WIDTH;
 
-    WaitBlit();
+        LONG_PTR(custom->bltcon0) = 0x09f00000;
+        LONG_PTR(custom->bltafwm) = 0xffffffff;
 
-    LONG_PTR(custom->bltcon0) = 0x09f00000;
+        USHORT letterNumber = letters[letterIndex] - 0x30;
+
+        UWORD letterOffset = letterNumber / FONT_LETTERS_PER_LINE * (FONT_LETTER_HEIGHT * FONT_BPL_SIZE * 3);
+        letterNumber = letterNumber % FONT_LETTERS_PER_LINE;
+        letterOffset += letterNumber * FONT_LETTER_WIDTH / 8;  
+
+        custom->bltapt = (APTR)((ULONG)fontData + letterOffset);
+        custom->bltdpt = (APTR)((ULONG)bottomScreen + (SCREEN_BPL_SIZE*3) * plotY) + plotX/8;
+        
+        custom->bltamod = FONT_BPL_SIZE - 2; 
+        custom->bltdmod = SCREEN_BPL_SIZE - 2;
+        custom->bltsize = (UWORD)(FONT_LETTER_WIDTH*3 * 64 + 1);
+        WaitBlit();
+
+        letterIndex++;
+        if(letterIndex >= letterCount) letterIndex = 0;
+    }
+
+    scrollCounter += SCROLL_SPEED;
+    if(scrollCounter == FONT_LETTER_WIDTH)
+        scrollCounter = 0;
+
+    UWORD offset = 30 * SCREEN_BYTE_WIDTH;
+
+    UWORD blth = FONT_LETTER_HEIGHT;
+    UWORD bltw = SCREEN_BPL_W / FONT_LETTER_WIDTH;
+
+    UWORD bottomRightCorner = blth * SCREEN_BYTE_WIDTH - 2;
+
+    LONG_PTR(custom->bltcon0) = 0x09f00002 | SCROLL_SPEED << 28;
     LONG_PTR(custom->bltafwm) = 0xffffffff;
    
-    custom->bltapt = (APTR)fontData;
-    custom->bltdpt = (APTR)((ULONG)bottomScreen + (SCREEN_BPL_SIZE*3) * scrollY);
-    
-    custom->bltamod = FONT_BPL_SIZE - 2; 
-    custom->bltdmod = SCREEN_BPL_SIZE - 2;
-    custom->bltsize = (UWORD)(16*3 * 64 + 1);
-
-    WaitBlit();
-    
-    UWORD bltx = 48;
-    UWORD blty = 30;
-    UWORD offset = blty * (SCREEN_BPL_SIZE*3) + (bltx/8);
-
-    UWORD blth = 50;
-    UWORD bltw = 224 / 16;
-    UWORD bltskip = (SCREEN_BPL_W - 224)/8;
-
-    UWORD corner = (blth-1) * (SCREEN_BPL_SIZE*3) + (bltw*2) - 2;
-
-    LONG_PTR(custom->bltcon0) = 0x19f00002;
-    LONG_PTR(custom->bltafwm) = 0xffffffff;
-   
-    APTR bitplane_offset = (APTR)((ULONG)bottomScreen + offset + corner);
+    APTR bitplane_offset = (APTR)((ULONG)bottomScreen + offset + bottomRightCorner);
 
     custom->bltapt = bitplane_offset;
     custom->bltdpt = bitplane_offset;
     
-    custom->bltdmod = bltskip;
-    custom->bltamod = bltskip; 
-    custom->bltsize = (UWORD)((blth*3) * 64 + bltw);
+    custom->bltdmod = 0;
+    custom->bltamod = 0; 
+    custom->bltsize = (blth*3) * 64 + bltw;
+    WaitBlit();
     
     /* ###########
        end blitter
@@ -319,11 +346,11 @@ int main()
 
     bottomScreen = AllocMem(SCREEN_SIZE * SCREEN_BITPLANES, MEMF_CHIP | MEMF_CLEAR);
 
-    UWORD c = 0;
-    for(ULONG i = 0; i < SCREEN_SIZE/2; i++) {
+    /*UWORD c = 0;
+    for(ULONG i = 0; i < SCREEN_SIZE/16; i++) {
         bottomScreen[i] = c;
         c++;
-    }
+    }*/
 
     // second screen
     CPWAIT(copPtr, CPLINE(LINE_BOTTOM+LINES+1, LINE_START), 0xfffe);
@@ -338,8 +365,8 @@ int main()
         CPMOVE_L(copPtr, offsetof(struct Custom, bplpt[i]), bpl);
     }
 
-    CPMOVE(copPtr, BPL1MOD, SCREEN_BYTE_WIDTH - SCREEN_BPL_SIZE);
-    CPMOVE(copPtr, BPL2MOD, SCREEN_BYTE_WIDTH - SCREEN_BPL_SIZE);
+    CPMOVE(copPtr, BPL1MOD, SCREEN_BYTE_WIDTH - VIEWPORT_W/8);
+    CPMOVE(copPtr, BPL2MOD, SCREEN_BYTE_WIDTH - VIEWPORT_W/8);
     
     CPMOVE(copPtr, DDFSTRT, 0x38);
     CPMOVE(copPtr, DDFSTOP, 0xd0);
@@ -372,8 +399,6 @@ int main()
     custom->intreq = INTF_VERTB;
     custom->cop1lc = (ULONG)copinit;
 	custom->dmacon = DMAF_SETCLR | DMAF_ALL;
-
-    Scroll(bottomScreen);
 
 	while(ciaa->ciapra & CIAF_GAMEPORT0) // active low
 	{
