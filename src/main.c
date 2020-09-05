@@ -58,6 +58,7 @@ static void HaveFunWithGraphics()
 #define SCREEN_BPL_W 352
 #define SCREEN_BPL_H 256
 #define SCREEN_BITPLANES 3
+
 #define SCREEN_BPL_SIZE (SCREEN_BPL_W/8)
 #define SCREEN_BYTE_WIDTH (SCREEN_BPL_SIZE * SCREEN_BITPLANES)
 #define SCREEN_SIZE SCREEN_BPL_W*SCREEN_BPL_H/8
@@ -71,12 +72,13 @@ static void HaveFunWithGraphics()
 #define IMG_MARGIN ((VIEWPORT_W - IMG_W)/2)
 #define IMG_BPL_SIZE (IMG_W / 8)
 #define IMG_BYTE_WIDTH (IMG_BPL_SIZE * IMG_BITPLANES)
-#define IMG_SIZE IMG_BYTE_WIDTH * (IMG_H)
+#define IMG_SIZE (IMG_BYTE_WIDTH * IMG_H)
 #define IMG_SIZE_WITH_MARGIN (IMG_SIZE + IMG_BYTE_WIDTH * 10)
 
 #define FONT_W 288
 #define FONT_H 82
 #define FONT_BPL_SIZE (FONT_W / 8)
+#define FONT_BYTE_WIDTH (FONT_BPL_SIZE * SCREEN_BITPLANES)
 #define FONT_COLORS 8
 #define FONT_LETTER_WIDTH 16
 #define FONT_LETTER_HEIGHT 16
@@ -171,15 +173,31 @@ UWORD *bottomScreen;
 const char* letters = "GREETINGS FROM THE OLD AMIGA COMPUTER!   ";
 USHORT letterIndex = 0;
 
+UWORD* bottomScreenBplsPtr;
+SHORT y = 0;
+SHORT bounce_dir = 1;
+
 static void Scroll() {
+
+    UWORD * bottomScreenPtr = (UWORD*)((ULONG)bottomScreen + (SCREEN_BPL_SIZE*3 * y));
+    UWORD* bplPtr = bottomScreenBplsPtr;
+    for(SHORT i = 0; i < SCREEN_BITPLANES; i++) {
+        ULONG bpl = ((ULONG)bottomScreenPtr) + i * SCREEN_BPL_SIZE;  
+        CPMOVE_L(bplPtr, offsetof(struct Custom, bplpt[i]), bpl);
+    }
+
+    y += bounce_dir;
+    if(y == 100 || y == 0)
+        bounce_dir *= -1;
+
     WaitBlit();
 
     SHORT letterCount = strlen(letters);
     /*  #######
         blitter
         ####### */
-    if(scrollCounter == 0) {
-        UWORD plotY = 30;
+    UWORD plotY = 100;
+    if(scrollCounter == 0) {    
         UWORD plotX = SCREEN_BPL_W - FONT_LETTER_WIDTH;
 
         LONG_PTR(custom->bltcon0) = 0x09f00000;
@@ -187,7 +205,7 @@ static void Scroll() {
 
         USHORT letterNumber = letters[letterIndex] - 0x30;
 
-        UWORD letterOffset = letterNumber / FONT_LETTERS_PER_LINE * (FONT_LETTER_HEIGHT * FONT_BPL_SIZE * 3);
+        UWORD letterOffset = letterNumber / FONT_LETTERS_PER_LINE * (FONT_LETTER_HEIGHT * FONT_BYTE_WIDTH);
         letterNumber = letterNumber % FONT_LETTERS_PER_LINE;
         letterOffset += letterNumber * FONT_LETTER_WIDTH / 8;  
 
@@ -207,7 +225,7 @@ static void Scroll() {
     if(scrollCounter == FONT_LETTER_WIDTH)
         scrollCounter = 0;
 
-    UWORD offset = 30 * SCREEN_BYTE_WIDTH;
+    UWORD offset = plotY * SCREEN_BYTE_WIDTH;
 
     UWORD blth = FONT_LETTER_HEIGHT;
     UWORD bltw = SCREEN_BPL_W / FONT_LETTER_WIDTH;
@@ -263,7 +281,6 @@ static void FreeMySprite(struct Sprite *sprite, SHORT spriteDataSize) {
     FreeMem(sprite, sizeof(struct Sprite) + spriteDataSize);
 }
 
-
 int main() 
 {
     SysBase = *((struct ExecBase**)4UL);
@@ -298,7 +315,7 @@ int main()
     CPMOVE(copPtr, DIWSTRT, 0x4c81);
     CPMOVE(copPtr, DIWSTOP, 0x2cc1);
     
-    CPMOVE(copPtr, BPLCON0, 0x3200);    // three bitplanes
+    CPMOVE(copPtr, BPLCON0, 0x1000 * IMG_BITPLANES + 0x0200);
     CPMOVE(copPtr, BPLCON1, 0x0000);
     CPMOVE(copPtr, BPLCON2, 0x0000);
 
@@ -306,7 +323,7 @@ int main()
     CPMOVE(copPtr, BPL2MOD, IMG_BYTE_WIDTH - IMG_BPL_SIZE);
 
     for(SHORT i = 0; i < IMG_BITPLANES; i++) {
-        ULONG bpl = ((ULONG)image) + i * IMG_BPL_SIZE;  
+        ULONG bpl = ((ULONG)image) + i * IMG_BPL_SIZE;
         CPMOVE_L(copPtr, offsetof(struct Custom, bplpt[i]), bpl);
     }
 
@@ -346,12 +363,6 @@ int main()
 
     bottomScreen = AllocMem(SCREEN_SIZE * SCREEN_BITPLANES, MEMF_CHIP | MEMF_CLEAR);
 
-    /*UWORD c = 0;
-    for(ULONG i = 0; i < SCREEN_SIZE/16; i++) {
-        bottomScreen[i] = c;
-        c++;
-    }*/
-
     // second screen
     CPWAIT(copPtr, CPLINE(LINE_BOTTOM+LINES+1, LINE_START), 0xfffe);
 
@@ -360,6 +371,8 @@ int main()
         CPMOVE(copPtr, offsetof(struct Custom, color[i]), color);
     }
 
+    //UWORD * bottomScreenPtr = (UWORD*)((ULONG)bottomScreen + (SCREEN_BPL_SIZE*3 * 30));
+    bottomScreenBplsPtr = copPtr;
     for(SHORT i = 0; i < SCREEN_BITPLANES; i++) {
         ULONG bpl = ((ULONG)bottomScreen) + i * SCREEN_BPL_SIZE;  
         CPMOVE_L(copPtr, offsetof(struct Custom, bplpt[i]), bpl);
@@ -370,7 +383,7 @@ int main()
     
     CPMOVE(copPtr, DDFSTRT, 0x38);
     CPMOVE(copPtr, DDFSTOP, 0xd0);
-    CPMOVE(copPtr, BPLCON0, 0x3200);    // three bitplanes
+    CPMOVE(copPtr, BPLCON0, 0x1000 * SCREEN_BITPLANES + 0x0200);    // three bitplanes
 
     // bottom line
     CPWAIT(copPtr, CPLINE(0xff, LINE_END), 0xfffe);
