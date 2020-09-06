@@ -31,6 +31,9 @@
 #include "system/interrupts.h"
 #include <string.h>
 
+#include "sprite/common.h"
+#include "sprite/explosion.h"
+
 struct GfxBase *GfxBase = NULL;
 struct IntuitionBase *IntuitionBase = NULL;
 extern struct DosLibrary *DOSBase;
@@ -96,10 +99,10 @@ static void HaveFunWithGraphics()
 
 #define COPPERLIST_SIZE 512
 
-INCBIN(imageData, ".\\\\assets\\\\image.166x72.bltraw")
+INCBIN(imageData, ".\\\\assets\\\\image.166x72.bltraw");
 INCBIN(imageColors, ".\\\\assets\\\\palette.raw");
 
-INCBIN_CHIP(fontData, ".\\\\assets\\\\font.288x82.bltraw")
+INCBIN_CHIP(fontData, ".\\\\assets\\\\font.288x82.bltraw");
 INCBIN(fontColors, ".\\\\assets\\\\font-palette.raw");
 
 struct copinit *oldcopinit;
@@ -110,14 +113,6 @@ typedef struct CopperLine {
     WORD _colorRegister;
     WORD colorValue;
 } CopperLine;
-
-struct Sprite {
-    UBYTE vStart;
-    UBYTE hStart;
-    UBYTE vStop;
-    UBYTE flags;
-    WORD data[];
-};
 
 CopperLine* lines[LINES];
 LONG line_colors[LINES] = { 0x444, 0x777, 0xbbb, 0xfff, 0xbbb, 0x777, 0x444, 0x000 };
@@ -139,33 +134,13 @@ static void WaitVbl() {
     while (GetVPos() != (311<<8)) { }
 }
 
-const UWORD __chip mySpriteData[] = {
-    0b0000011111100000, 0b0000000000000000,
-    0b0001100000011000, 0b0000011111100000,
-    0b0010001111000100, 0b0001111111111000,
-    0b0100111001110010, 0b0011111001111100,
-    0b0101100000011010, 0b0011100000011100,
-    0b1001000000001001, 0b0111000000001110,  
-    0b1010000000000101, 0b0110000000000110,  
-    0b1010000000000101, 0b0110000000000110,  
-    0b1010000000000101, 0b0110000000000110,  
-    0b1010000000000101, 0b0110000000000110,    
-    0b1001000000001001, 0b0111000000001110, 
-    0b0101100000011010, 0b0011100000011100,
-    0b0100111001110010, 0b0011111001111100,
-    0b0010001111000100, 0b0001111111111000,
-    0b0001100000011000, 0b0000011111100000,
-    0b0000011111100000, 0b0000000000000000,
-    0, 0
-};
-
 const UWORD __chip nullSpriteData[] = {
     0, 0,
     0, 0
 };
 
-struct Sprite *sprite1;
-struct Sprite *nullSprite;
+struct Explosion *explosion;
+struct MySprite *nullSprite;
 
 UWORD scrollCounter = 0;
 UWORD *bottomScreen;
@@ -174,8 +149,10 @@ const char* letters = "GREETINGS FROM THE OLD AMIGA COMPUTER!   ";
 USHORT letterIndex = 0;
 
 UWORD* bottomScreenBplsPtr;
-SHORT y = 0;
-SHORT bounce_dir = 1;
+
+#define JUMP_STRENGHT 5
+#define GRAVITY_FRAMES 5
+SHORT y = 0,  jump = 0, gravityFrames = 0;
 
 static void Scroll() {
 
@@ -186,9 +163,14 @@ static void Scroll() {
         CPMOVE_L(bplPtr, offsetof(struct Custom, bplpt[i]), bpl);
     }
 
-    y += bounce_dir;
-    if(y == 100 || y == 0)
-        bounce_dir *= -1;
+    if(y == 0)
+        jump = JUMP_STRENGHT;
+    y += jump;
+
+    if(++gravityFrames == GRAVITY_FRAMES) {
+        jump -= 1; 
+        gravityFrames = 0;
+    }
 
     WaitBlit();
 
@@ -203,7 +185,7 @@ static void Scroll() {
         LONG_PTR(custom->bltcon0) = 0x09f00000;
         LONG_PTR(custom->bltafwm) = 0xffffffff;
 
-        USHORT letterNumber = letters[letterIndex] - 0x30;
+        USHORT letterNumber = letters[letterIndex] - 0x1e;
 
         UWORD letterOffset = letterNumber / FONT_LETTERS_PER_LINE * (FONT_LETTER_HEIGHT * FONT_BYTE_WIDTH);
         letterNumber = letterNumber % FONT_LETTERS_PER_LINE;
@@ -261,24 +243,11 @@ static __interrupt void MoveLine()
     for(SHORT i = 0; i < LINES; i++) {
         lines[i]->vhpos = CPLINE(line+i, LINE_START);
     }
-    sprite1->hStart++;
     Scroll();
-    //sprite1->vStart++;
-    //sprite1->vStop++;
-}
 
-static struct Sprite *AllocMySprite(struct Sprite newSprite, const UWORD *spriteData, SHORT spriteDataSize) {
-    struct Sprite* spritePtr = (struct Sprite*) AllocMem(sizeof(struct Sprite) + spriteDataSize, MEMF_CHIP);
-    spritePtr->vStart = newSprite.vStart;
-    spritePtr->hStart = newSprite.hStart;
-    spritePtr->vStop = newSprite.vStop;
-    spritePtr->flags = newSprite.flags;
-    CopyMem((UWORD*)spriteData, &spritePtr->data, spriteDataSize);
-    return spritePtr;
-}
-
-static void FreeMySprite(struct Sprite *sprite, SHORT spriteDataSize) {
-    FreeMem(sprite, sizeof(struct Sprite) + spriteDataSize);
+    Explosion_NextFrame(explosion);
+    Explosion_Move(explosion, 1, 0);
+    Explosion_Paint(explosion);
 }
 
 int main() 
@@ -290,18 +259,13 @@ int main()
     UWORD* image = AllocMem(IMG_SIZE_WITH_MARGIN, MEMF_CHIP | MEMF_CLEAR);
     CopyMem(imageData, image, IMG_SIZE);
 
-    sprite1 = AllocMySprite((struct Sprite) {
-        .vStart = 0xac,
-        .hStart = 0x40,
-        .vStop = 0xbc,
-        .flags = 0x0
-    }, mySpriteData, sizeof(mySpriteData));
-
-    nullSprite = AllocMySprite((struct Sprite) {
+    explosion = Explosion_Create(0x80, 0xDC);
+    
+    nullSprite = AllocMySprite((struct MySprite) {
         .vStart = 0x2a,
+        .vStop  = 0x2b,
         .hStart = 0x20,
-        .vStop = 0x2b,
-        .flags = 0x0
+        .flags  = 0x0
     }, nullSpriteData, sizeof(nullSpriteData));
 
     APTR copinit = AllocMem(COPPERLIST_SIZE, MEMF_CHIP);
@@ -337,7 +301,9 @@ int main()
     CPMOVE(copPtr, COLOR18, 0x06C);
     CPMOVE(copPtr, COLOR19, 0x0AC);
 
-    CPMOVE_L(copPtr, SPR1PTH, (ULONG)sprite1);
+    explosion->copperListSpritePointer = copPtr;
+    CPMOVE_L(copPtr, SPR0PTH, (ULONG)Explosion_CurrentFrame(explosion)->sprite);
+    CPMOVE_L(copPtr, SPR1PTH, (ULONG)nullSprite);
     CPMOVE_L(copPtr, SPR2PTH, (ULONG)nullSprite);
     CPMOVE_L(copPtr, SPR3PTH, (ULONG)nullSprite);
     CPMOVE_L(copPtr, SPR4PTH, (ULONG)nullSprite);
@@ -424,7 +390,7 @@ int main()
     FreeMem(bottomScreen, SCREEN_SIZE);
     FreeMem(image, IMG_SIZE_WITH_MARGIN);
     
-    FreeMySprite(sprite1, sizeof(mySpriteData));
+    Explosion_Free(explosion);
     FreeMySprite(nullSprite, sizeof(nullSpriteData));
 
     custom->intreq = 0x7fff;
