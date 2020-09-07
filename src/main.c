@@ -13,6 +13,8 @@
 #include "support/gcc8_c_support.h"
 #include "system/interrupts.h"
 #include "system/system.h"
+#include "copper/screen.h"
+#include "copper/display.h"
 
 #define SCREEN_BPL_W 352
 #define SCREEN_BPL_H 256
@@ -22,17 +24,10 @@
 #define SCREEN_BYTE_WIDTH (SCREEN_BPL_SIZE * SCREEN_BITPLANES)
 #define SCREEN_SIZE SCREEN_BPL_W*SCREEN_BPL_H/8
 
+#define IMG_H 72
+
 #define VIEWPORT_W 320
 #define VIEWPORT_H SCREEN_BPL_H
-
-#define IMG_W 176
-#define IMG_H 72
-#define IMG_BITPLANES 3
-#define IMG_MARGIN ((VIEWPORT_W - IMG_W)/2)
-#define IMG_BPL_SIZE (IMG_W / 8)
-#define IMG_BYTE_WIDTH (IMG_BPL_SIZE * IMG_BITPLANES)
-#define IMG_SIZE (IMG_BYTE_WIDTH * IMG_H)
-#define IMG_SIZE_WITH_MARGIN (IMG_SIZE + IMG_BYTE_WIDTH * 10)
 
 #define FONT_W 288
 #define FONT_H 82
@@ -93,6 +88,9 @@ struct Explosion *explosion;
 struct MySprite *nullSprite;
 
 struct SystemData systemData;
+struct Display display;
+struct NewScreen logoScreen;
+struct NewScreen textScreen;
 
 UWORD scrollCounter = 0;
 UWORD *bottomScreen;
@@ -202,14 +200,30 @@ static __interrupt void MoveLine()
     Explosion_Paint(explosion);
 }
 
+UWORD imageSizeWithMargin;
+
+static UWORD* CreateLogoScreen(UWORD* copPtr) {
+    // logo
+    logoScreen.Width = 176;
+    logoScreen.Height = 72;
+    logoScreen.Bitplanes = 3;
+    logoScreen.Palette = (UWORD*)imageColors;
+    logoScreen.Display = &display;
+
+    UWORD imageSize = Screen_ByteWidth(&logoScreen) * logoScreen.Height;
+
+    imageSizeWithMargin = imageSize + Screen_ByteWidth(&logoScreen) * 10;
+    logoScreen.Data = AllocMem(imageSizeWithMargin, MEMF_CHIP | MEMF_CLEAR);
+    CopyMem(imageData, logoScreen.Data, imageSize);    
+
+    return Screen_Create(copPtr, &logoScreen);
+}
+
 int main() 
 {
     SysBase = *((struct ExecBase**)4UL);
     line_colors[LINES-1] = ((UWORD*)imageColors)[0];
     //((UWORD*)fontColors)[0] = ((UWORD*)imageColors)[0];
-
-    UWORD* image = AllocMem(IMG_SIZE_WITH_MARGIN, MEMF_CHIP | MEMF_CLEAR);
-    CopyMem(imageData, image, IMG_SIZE);
 
     explosion = Explosion_Create(0x80, 0xDC);
     
@@ -223,30 +237,14 @@ int main()
     APTR copinit = AllocMem(COPPERLIST_SIZE, MEMF_CHIP);
     UWORD* copPtr = copinit;
 
-    // logo
+    // view port
+    display.Width = 320;
+    display.Height = 256;
+    display.TopMargin = 76;
+    display.LeftMargin = 110;
 
-    CPMOVE(copPtr, DDFSTRT, 0x38 + IMG_MARGIN/2);
-    CPMOVE(copPtr, DDFSTOP, 0xd0 - IMG_MARGIN/2);
-
-    CPMOVE(copPtr, DIWSTRT, 0x4c81);
-    CPMOVE(copPtr, DIWSTOP, 0x2cc1);
-    
-    CPMOVE(copPtr, BPLCON0, 0x1000 * IMG_BITPLANES + 0x0200);
-    CPMOVE(copPtr, BPLCON1, 0x0000);
-    CPMOVE(copPtr, BPLCON2, 0x0000);
-
-    CPMOVE(copPtr, BPL1MOD, IMG_BYTE_WIDTH - IMG_BPL_SIZE);
-    CPMOVE(copPtr, BPL2MOD, IMG_BYTE_WIDTH - IMG_BPL_SIZE);
-
-    for(SHORT i = 0; i < IMG_BITPLANES; i++) {
-        ULONG bpl = ((ULONG)image) + i * IMG_BPL_SIZE;
-        CPMOVE_L(copPtr, offsetof(struct Custom, bplpt[i]), bpl);
-    }
-
-    for(SHORT i = 0; i < 16;i++) {
-        UWORD color = ((UWORD*)imageColors)[i];
-        CPMOVE(copPtr, offsetof(struct Custom, color[i]), color);
-    }
+    copPtr = Display_Create(copPtr, &display);
+    copPtr = CreateLogoScreen(copPtr);
 
     // sprite
     CPMOVE(copPtr, COLOR17, 0x10C);
@@ -279,17 +277,19 @@ int main()
         CPMOVE(copPtr, COLOR00, line_colors[i]);
     }
 
-    bottomScreen = AllocMem(SCREEN_SIZE * SCREEN_BITPLANES, MEMF_CHIP | MEMF_CLEAR);
-
     // second screen
     CPWAIT(copPtr, CPLINE(LINE_BOTTOM+LINES+1, LINE_START), 0xfffe);
+
+    /*textScreen.Palette = fontColors;
+    textScreen.Width = 352;
+    textScreen.Height = display.Height;*/
 
     for(SHORT i = 0; i < FONT_COLORS;i++) {
         UWORD color = ((UWORD*)fontColors)[i];
         CPMOVE(copPtr, offsetof(struct Custom, color[i]), color);
     }
 
-    //UWORD * bottomScreenPtr = (UWORD*)((ULONG)bottomScreen + (SCREEN_BPL_SIZE*3 * 30));
+    bottomScreen = AllocMem(SCREEN_SIZE * SCREEN_BITPLANES, MEMF_CHIP | MEMF_CLEAR);
     bottomScreenBplsPtr = copPtr;
     for(SHORT i = 0; i < SCREEN_BITPLANES; i++) {
         ULONG bpl = ((ULONG)bottomScreen) + i * SCREEN_BPL_SIZE;  
@@ -333,7 +333,7 @@ int main()
     
     FreeMem(copinit, COPPERLIST_SIZE);
     FreeMem(bottomScreen, SCREEN_SIZE);
-    FreeMem(image, IMG_SIZE_WITH_MARGIN);
+    FreeMem(logoScreen.Data, imageSizeWithMargin);
     
     Explosion_Free(explosion);
     FreeMySprite(nullSprite, sizeof(nullSpriteData));

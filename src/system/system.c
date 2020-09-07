@@ -1,4 +1,3 @@
-#pragma once;
 #include "system.h"
 #include <proto/graphics.h>
 #include <graphics/gfxmacros.h>
