@@ -1,62 +1,18 @@
-#include "support/gcc8_c_support.h"
-
 #include <hardware/cia.h>
-#include <hardware/custom.h>
+#include <proto/graphics.h>
+
+#include <hardware/intbits.h>
+#include <hardware/dmabits.h>
+#include <string.h>
 
 #include "common/structs.h"
 #include "common/utils.h"
-
-#include "support/gcc8_c_support.h"
-#include <proto/exec.h>
-#include <proto/intuition.h>
-#include <proto/gadtools.h>
-#include <proto/graphics.h>
-#include <proto/dos.h>
-
-#include <graphics/gfxmacros.h>
-
-#include <intuition/intuitionbase.h>
-#include <hardware/adkbits.h>
-#include <hardware/intbits.h>
-
-#include <exec/execbase.h>
-#include <graphics/gfxbase.h>
-
-#include "common/screen.h"
-#include "drawing/example.h"
-#include "intuition/example.h"
-#include "sprite/example.h"
-#include "bob/example.h"
 #include "common/custom_chip.h"
-#include "system/interrupts.h"
-#include <string.h>
-
 #include "sprite/common.h"
 #include "sprite/explosion.h"
-
-struct GfxBase *GfxBase = NULL;
-struct IntuitionBase *IntuitionBase = NULL;
-extern struct DosLibrary *DOSBase;
-
-struct View* oldView;
-
-static void StoreCurrentView() {        
-    oldView = GfxBase->ActiView;
-}
-
-static void RevertOldView() {
-    LoadView(oldView);
-} 
-
-static void HaveFunWithGraphics() 
-{
-    struct ViewInfo* vi = CreateView();
-    //RunDrawExample(vi);
-
-    RunVSpriteExample(vi);
-    //RunBobExample(vi);
-    FreeView(vi);
-}
+#include "support/gcc8_c_support.h"
+#include "system/interrupts.h"
+#include "system/system.h"
 
 #define SCREEN_BPL_W 352
 #define SCREEN_BPL_H 256
@@ -105,8 +61,6 @@ INCBIN(imageColors, ".\\\\assets\\\\palette.raw");
 INCBIN_CHIP(fontData, ".\\\\assets\\\\font.288x82.bltraw");
 INCBIN(fontColors, ".\\\\assets\\\\font-palette.raw");
 
-struct copinit *oldcopinit;
-
 typedef struct CopperLine {
     WORD vhpos;
     WORD _mask;
@@ -117,10 +71,6 @@ typedef struct CopperLine {
 CopperLine* lines[LINES];
 LONG line_colors[LINES] = { 0x444, 0x777, 0xbbb, 0xfff, 0xbbb, 0x777, 0x444, 0x000 };
 
-UWORD SystemInts;
-UWORD SystemDMA;
-
-static APTR SystemIrq;
 
 USHORT line = (LINE_TOP + LINE_BOTTOM)/2;
 WORD line_direction = 1;
@@ -141,6 +91,8 @@ const UWORD __chip nullSpriteData[] = {
 
 struct Explosion *explosion;
 struct MySprite *nullSprite;
+
+struct SystemData systemData;
 
 UWORD scrollCounter = 0;
 UWORD *bottomScreen;
@@ -360,70 +312,30 @@ int main()
     CPMOVE(copPtr, COLOR00, 0x349);
     CPEND(copPtr);
 
-    // kill system
-    GfxBase = (struct GfxBase *)OpenLibrary(GRAPHICSNAME, 0);
-    oldcopinit = GfxBase->copinit;
+    System_Kill(&systemData);
 
-    CloseLibrary((struct Library*)GfxBase);
-    
-    SystemInts = custom->intenar;
-    SystemDMA = custom->dmaconr;
-    SystemIrq = GetInterruptHandler(); //store interrupt register
+    WaitVbl();
 
     // initialize custom values
-    WaitVbl();
     SetInterruptHandler((APTR)MoveLine);
-
     custom->intena = INTF_SETCLR | INTF_VERTB;
     custom->intreq = INTF_VERTB;
     custom->cop1lc = (ULONG)copinit;
 	custom->dmacon = DMAF_SETCLR | DMAF_ALL;
 
+    // main loop
 	while(ciaa->ciapra & CIAF_GAMEPORT0) // active low
 	{
         // interrupt handler moves the line on the screen
 	}
 
-    // restore system
-    custom->cop1lc = oldcopinit;
+    System_Restore(&systemData);
+    
     FreeMem(copinit, COPPERLIST_SIZE);
     FreeMem(bottomScreen, SCREEN_SIZE);
     FreeMem(image, IMG_SIZE_WITH_MARGIN);
     
     Explosion_Free(explosion);
     FreeMySprite(nullSprite, sizeof(nullSpriteData));
-
-    custom->intreq = 0x7fff;
-    custom->intena = SystemInts | 0xc000;
-    custom->dmacon = SystemDMA | 0x8000;
-    SetInterruptHandler(SystemIrq);
-
     return 0;
-    /*
-    SysBase = *((struct ExecBase**)4UL);
-    
-    UWORD pens[] = { ~0 };
-    struct Screen *my_screen;
-
-    //RunIntuitionExample();
-    IntuitionBase = (struct IntuitionBase *)OpenLibrary("intuition.library",0);
-    GfxBase = (struct GfxBase *)OpenLibrary("graphics.library", 0);
-    DOSBase = (struct DosLibrary*)OpenLibrary("dos.library", 0);
-
-    my_screen = OpenScreenTags(NULL,
-                                SA_Pens, (ULONG)pens,
-                                SA_Depth, 2,
-                                TAG_DONE);
-
-
-    HaveFunWithGraphics();
-    CloseScreen(my_screen);
-
-    //RevertOldView();
-    CloseLibrary((struct Library *)IntuitionBase);
-    CloseLibrary((struct Library *)GfxBase);
-    CloseLibrary((struct Library *)DOSBase);
-
-    return 0;
-    */
 }

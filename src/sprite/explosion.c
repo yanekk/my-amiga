@@ -7,7 +7,7 @@
 #include "../common/utils.h"
 #include "../common/custom_chip.h"
 
-SHORT frameHeights[EXPLOSION_FRAMES] =  { 4, 6, 8, 12, 14, 16, 18, 18, 18, 18, 18, 18, 18 };
+SHORT frameHeights[EXPLOSION_FRAMES] =  { 4, 6, 8, 12, 14, 16, 18, 18, 18, 18, 18 };
 
 INCBIN_CHIP(spriteData, ".\\\\assets\\\\explosion.16x16.spr");
 

@@ -1,3 +1,4 @@
+#pragma once
 #include <exec/types.h>
 #include <proto/exec.h>
 #include <exec/execbase.h>
