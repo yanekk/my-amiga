@@ -11,6 +11,5 @@ UWORD* Display_Create(UWORD* copPtr, struct Display* display)
 
     CPMOVE(copPtr, DIWSTRT, diwStart);
     CPMOVE(copPtr, DIWSTOP, diwStop);
-    KPrintF("%d %d", diwStop);
     return copPtr;
 }
