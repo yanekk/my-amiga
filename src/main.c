@@ -37,6 +37,7 @@
 #define LINES 8
 
 #define COPPERLIST_SIZE 512
+#define MUSIC 0
 
 INCBIN(imageData, ".\\\\assets\\\\image.164x72.raw");
 INCBIN(imageColors, ".\\\\assets\\\\palette.raw");
@@ -124,7 +125,8 @@ static void MoveLine()
 
 static __interrupt void OnVBlank() {
     custom->intreq = INTF_VERTB;
-    p61Music();
+    if(MUSIC)
+        p61Music();
 }
 
 UWORD imageSizeWithMargin;
