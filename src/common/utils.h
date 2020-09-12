@@ -18,7 +18,7 @@
     CPMOVE(cpr, addr, ((UWORD)(ldata >> 16))); \
     CPMOVE(cpr, (addr)+2, ((UWORD)ldata)) 
 
-#define CPWAIT(cpr, vhpos, flags) CPCOMMAND(cpr, vhpos, flags)
+#define CPWAIT(cpr, vhpos) CPCOMMAND(cpr, vhpos, 0xfffe)
 #define CPEND(cpr) CPCOMMAND(cpr, 0xffff, 0xfffe)
 #define CPLINE(h, v) ((v) | (h) << 8)
 

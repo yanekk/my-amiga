@@ -12,10 +12,12 @@ struct NewScreen {
     // do not modify, set internally by Screen_Create
     UWORD* BitplanesCopperPointer;
     UWORD BitplaneSize;
-    UWORD ByteWidth;
+    UWORD RowWidth;
+    UWORD Size;
 };
 
 UWORD* Screen_Create(UWORD* copPtr, struct NewScreen* newScreen);
+UWORD Screen_RowWidth(struct NewScreen* newScreen);
 UWORD Screen_BitplaneSize(struct NewScreen* newScreen);
-UWORD Screen_ByteWidth(struct NewScreen* newScreen);
+UWORD Screen_Size(struct NewScreen* newScreen);
 void Screen_SetY(struct NewScreen* newScreen, SHORT y);

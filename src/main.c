@@ -16,20 +16,13 @@
 #include "copper/screen.h"
 #include "copper/display.h"
 #include "effects/bounce.h"
+#include "blitter/copy.h"
 
 #define IMG_H 72
 
-#define VIEWPORT_W 320
-#define VIEWPORT_H SCREEN_BPL_H
-
-#define FONT_W 288
-#define FONT_H 82
-#define FONT_BPL_SIZE (FONT_W / 8)
-#define FONT_BYTE_WIDTH (FONT_BPL_SIZE * 3)
-#define FONT_COLORS 8
 #define FONT_LETTER_WIDTH 16
 #define FONT_LETTER_HEIGHT 16
-#define FONT_LETTERS_PER_LINE 18
+#define FONT_LETTERS_PER_LINE 18 * FONT_LETTER_WIDTH
 
 #define SCROLL_SPEED 2
 
@@ -43,10 +36,10 @@
 
 #define COPPERLIST_SIZE 512
 
-INCBIN(imageData, ".\\\\assets\\\\image.166x72.bltraw");
+INCBIN(imageData, ".\\\\assets\\\\image.164x72.raw");
 INCBIN(imageColors, ".\\\\assets\\\\palette.raw");
 
-INCBIN_CHIP(fontData, ".\\\\assets\\\\font.288x82.bltraw");
+INCBIN_CHIP(fontData, ".\\\\assets\\\\font.288x96.raw");
 INCBIN(fontColors, ".\\\\assets\\\\font-palette.raw");
 
 typedef struct CopperLine {
@@ -83,6 +76,7 @@ struct SystemData systemData;
 struct Display display;
 struct NewScreen logoScreen;
 struct NewScreen textScreen;
+struct NewScreen fontScreen;
 
 struct Bounce bounce;
 
@@ -91,72 +85,37 @@ UWORD *bottomScreen;
 
 const char* letters = "GREETINGS FROM THE OLD AMIGA COMPUTER!   ";
 USHORT letterIndex = 0;
+SHORT letterCount;
+SHORT adj = 0;
+
+UWORD plotY = 100;
+UWORD plotX;
 
 static void Scroll() {
     Screen_SetY(&textScreen, bounce.y);
     Bounce_Update(&bounce);
 
-    WaitBlit();
-
-    SHORT letterCount = strlen(letters);
-    /*  #######
-        blitter
-        ####### */
-    UWORD plotY = 100;
-    if(scrollCounter == 0) {    
-        UWORD plotX = textScreen.Width - FONT_LETTER_WIDTH;
-
-        LONG_PTR(custom->bltcon0) = 0x09f00000;
-        LONG_PTR(custom->bltafwm) = 0xffffffff;
-
+    if(scrollCounter == 0) {
         USHORT letterNumber = letters[letterIndex] - 0x1e;
 
-        UWORD letterOffset = letterNumber / FONT_LETTERS_PER_LINE * (FONT_LETTER_HEIGHT * FONT_BYTE_WIDTH);
-        letterNumber = letterNumber % FONT_LETTERS_PER_LINE;
-        letterOffset += letterNumber * FONT_LETTER_WIDTH / 8;  
-
-        custom->bltapt = (APTR)((ULONG)fontData + letterOffset);
-        custom->bltdpt = (APTR)((ULONG)bottomScreen + textScreen.ByteWidth * plotY) + plotX/8;
-        
-        custom->bltamod = FONT_BPL_SIZE - 2; 
-        custom->bltdmod = textScreen.BitplaneSize - 2;
-        custom->bltsize = (UWORD)(FONT_LETTER_WIDTH*3 * 64 + 1);
-        WaitBlit();
+        Blitter_CopyAtoB(&fontScreen,
+            letterNumber % FONT_LETTERS_PER_LINE,
+            letterNumber / FONT_LETTERS_PER_LINE,
+            FONT_LETTER_WIDTH, FONT_LETTER_HEIGHT,
+            &textScreen, plotX, plotY);
 
         letterIndex++;
         if(letterIndex >= letterCount) letterIndex = 0;
     }
-
+    
     scrollCounter += SCROLL_SPEED;
     if(scrollCounter == FONT_LETTER_WIDTH)
         scrollCounter = 0;
-
-    UWORD offset = plotY * textScreen.ByteWidth;
-
-    UWORD blth = FONT_LETTER_HEIGHT;
-    UWORD bltw = textScreen.Width / FONT_LETTER_WIDTH;
-
-    UWORD bottomRightCorner = blth * textScreen.ByteWidth - 2;
-
-    LONG_PTR(custom->bltcon0) = 0x09f00002 | SCROLL_SPEED << 28;
-    LONG_PTR(custom->bltafwm) = 0xffffffff;
-   
-    APTR bitplane_offset = (APTR)((ULONG)bottomScreen + offset + bottomRightCorner);
-
-    custom->bltapt = bitplane_offset;
-    custom->bltdpt = bitplane_offset;
-    
-    custom->bltdmod = 0;
-    custom->bltamod = 0; 
-    custom->bltsize = (blth*3) * 64 + bltw;
-    WaitBlit();
-    
-    /* ###########
-       end blitter
-       ########### */
+    Blitter_ShiftALeft(&textScreen, plotX, plotY, 
+        textScreen.Width, FONT_LETTER_HEIGHT, SCROLL_SPEED);
 }
 
-static __interrupt void MoveLine() 
+static void MoveLine() 
 {
     custom->intreq = INTF_VERTB;
  
@@ -167,27 +126,39 @@ static __interrupt void MoveLine()
     for(SHORT i = 0; i < LINES; i++) {
         lines[i]->vhpos = CPLINE(line+i, LINE_START);
     }
+}
+
+static __interrupt void OnVBlank() {
+    MoveLine();
     Scroll();
 
     Explosion_NextFrame(explosion);
     Explosion_Move(explosion, 1, 0);
     Explosion_Paint(explosion);
-    
 }
 
 UWORD imageSizeWithMargin;
 
+static UWORD* CreateDisplay(UWORD* copPtr) {
+    // display settings
+    display.Width = 320;
+    display.Height = 256;
+    display.TopMargin = 76;
+    display.LeftMargin = 110;
+    return Display_Create(copPtr, &display);
+}
+
 static UWORD* CreateLogoScreen(UWORD* copPtr) {
     // logo
     logoScreen.Width = 176;
-    logoScreen.Height = 72;
+    logoScreen.Height = 86;
     logoScreen.Bitplanes = 3;
     logoScreen.Palette = (UWORD*)imageColors;
     logoScreen.Display = &display;
 
-    UWORD imageSize = Screen_ByteWidth(&logoScreen) * logoScreen.Height;
+    UWORD imageSize = Screen_Size(&logoScreen);
 
-    imageSizeWithMargin = imageSize + Screen_ByteWidth(&logoScreen) * 10;
+    imageSizeWithMargin = imageSize + Screen_RowWidth(&logoScreen) * logoScreen.Bitplanes * 10;
     logoScreen.Data = AllocMem(imageSizeWithMargin, MEMF_CHIP | MEMF_CLEAR);
     CopyMem(imageData, logoScreen.Data, imageSize);    
 
@@ -198,32 +169,49 @@ static UWORD* CreateTextScreen(UWORD* copPtr) {
     textScreen.Width = 352;
     textScreen.Height = display.Height;
     textScreen.Bitplanes = 3;
+    textScreen.Size = Screen_Size(&textScreen);
 
-    bottomScreen = AllocMem(Screen_ByteWidth(&textScreen) * textScreen.Height, MEMF_CHIP | MEMF_CLEAR);
+    bottomScreen = AllocMem(textScreen.Size, MEMF_CHIP | MEMF_CLEAR);
+    /*UWORD c = 0;
+    for(ULONG i = 0; i < textScreen.Size; i++) {
+        bottomScreen[i] = c;
+        c++;
+    }*/
+
     textScreen.Palette = fontColors;    
-    
     textScreen.Display = &display;
     textScreen.Data = bottomScreen;
 
     return Screen_Create(copPtr, &textScreen);
 }
 
+static void CreateFontScreen() {
+    fontScreen.Width = 288;
+    fontScreen.Height = 96;
+    fontScreen.Data = fontData;
+    fontScreen.Bitplanes = 3;
+    fontScreen.BitplaneSize = Screen_BitplaneSize(&fontScreen);
+    fontScreen.Size = Screen_Size(&fontScreen);
+    fontScreen.RowWidth = Screen_RowWidth(&fontScreen);
+}
+
+static void InitializeTextPlotting() {
+    plotX = textScreen.Width - FONT_LETTER_WIDTH;
+}
+
 int main() 
 {
     SysBase = *((struct ExecBase**)4UL);
     line_colors[LINES-1] = ((UWORD*)imageColors)[0];
-    //((UWORD*)fontColors)[0] = ((UWORD*)imageColors)[0];
+
+    letterCount = strlen(letters);
 
     APTR copinit = AllocMem(COPPERLIST_SIZE, MEMF_CHIP);
     UWORD* copPtr = copinit;
 
-    // display settings
-    display.Width = 320;
-    display.Height = 256;
-    display.TopMargin = 76;
-    display.LeftMargin = 110;
+    CreateFontScreen();
 
-    copPtr = Display_Create(copPtr, &display);
+    copPtr = CreateDisplay(copPtr);
     copPtr = CreateLogoScreen(copPtr);
 
     // sprite
@@ -231,7 +219,7 @@ int main()
     CPMOVE(copPtr, COLOR18, 0x06C);
     CPMOVE(copPtr, COLOR19, 0x0AC);
 
-    explosion = Explosion_Create(0x80, 0xDC);
+    explosion = Explosion_Create(128, 220);
     explosion->copperListSpritePointer = copPtr;
     CPMOVE_L(copPtr, SPR0PTH, (ULONG)Explosion_CurrentFrame(explosion)->sprite);
 
@@ -251,31 +239,32 @@ int main()
 
     // top line
     CPMOVE(copPtr, COLOR00, 0x349);
-    CPWAIT(copPtr, CPLINE(0x2b, LINE_START), 0xfffe);
+    CPWAIT(copPtr, CPLINE(0x2b, LINE_START));
 
     CPMOVE(copPtr, COLOR00, 0x56b);
-    CPWAIT(copPtr, CPLINE(0x2c, LINE_START), 0xfffe);
+    CPWAIT(copPtr, CPLINE(0x2c, LINE_START));
 
     CPMOVE(copPtr, COLOR00, ((UWORD*)imageColors)[0]);
 
     // copper line
     for(SHORT i = 0; i < LINES; i++) {
         lines[i] = (CopperLine*)copPtr;
-        CPWAIT(copPtr, CPLINE(0x80, LINE_START), 0xfffe);
+        CPWAIT(copPtr, CPLINE(0x80, LINE_START));
         CPMOVE(copPtr, COLOR00, line_colors[i]);
     }
 
     // second screen
-    CPWAIT(copPtr, CPLINE(LINE_BOTTOM+LINES, LINE_END), 0xfffe);
+    CPWAIT(copPtr, CPLINE(LINE_BOTTOM+LINES, LINE_END));
 
     copPtr = CreateTextScreen(copPtr);
+    InitializeTextPlotting();
     
     // bottom line
-    CPWAIT(copPtr, CPLINE(0xff, LINE_END), 0xfffe);
-    CPWAIT(copPtr, CPLINE(0x2c, LINE_START), 0xfffe);
+    CPWAIT(copPtr, CPLINE(0xff, LINE_END));
+    CPWAIT(copPtr, CPLINE(0x2c, LINE_START));
     CPMOVE(copPtr, COLOR00, 0x56c);
 
-    CPWAIT(copPtr, CPLINE(0x2d, LINE_START), 0xfffe);
+    CPWAIT(copPtr, CPLINE(0x2d, LINE_START));
     CPMOVE(copPtr, COLOR00, 0x349);
     CPEND(copPtr);
 
@@ -284,15 +273,20 @@ int main()
     WaitVbl();
 
     // initialize custom values
-    SetInterruptHandler((APTR)MoveLine);
+    SetInterruptHandler((APTR)OnVBlank);
     custom->intena = INTF_SETCLR | INTF_VERTB;
     custom->intreq = INTF_VERTB;
     custom->cop1lc = (ULONG)copinit;
 	custom->dmacon = DMAF_SETCLR | DMAF_ALL;
 
     // main loop
-	while(ciaa->ciapra & CIAF_GAMEPORT0) // active low
+	while(1) // active low
 	{
+        if((ciaa->ciapra & CIAF_GAMEPORT0) == 0) {
+            adj++;
+            KPrintF("%d %d", adj);
+            while((ciaa->ciapra & CIAF_GAMEPORT0) == 0) {}
+        }
         // interrupt handler moves the line on the screen
 	}
 
