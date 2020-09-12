@@ -13,10 +13,12 @@
 #include "support/gcc8_c_support.h"
 #include "system/interrupts.h"
 #include "system/system.h"
+#include "system/screen.h"
 #include "copper/screen.h"
 #include "copper/display.h"
 #include "effects/bounce.h"
 #include "blitter/copy.h"
+#include "music/p61.h"
 
 #define IMG_H 72
 
@@ -42,6 +44,8 @@ INCBIN(imageColors, ".\\\\assets\\\\palette.raw");
 INCBIN_CHIP(fontData, ".\\\\assets\\\\font.288x96.raw");
 INCBIN(fontColors, ".\\\\assets\\\\font-palette.raw");
 
+INCBIN_CHIP(music, ".\\\\assets\\\\P61.mod.my-1st-module.1")
+
 typedef struct CopperLine {
     WORD vhpos;
     WORD _mask;
@@ -54,15 +58,6 @@ LONG line_colors[LINES] = { 0x444, 0x777, 0xbbb, 0xfff, 0xbbb, 0x777, 0x444, 0x0
 
 USHORT line = (LINE_TOP + LINE_BOTTOM)/2;
 WORD line_direction = 1;
-
-static inline ULONG GetVPos() {
-    return (*(volatile ULONG*)0xDFF004) & 0x1ff00;
-}
-
-static void WaitVbl() {
-	while (GetVPos() == (311<<8)) { }
-    while (GetVPos() != (311<<8)) { }
-}
 
 const UWORD __chip nullSpriteData[] = {
     0, 0,
@@ -91,6 +86,7 @@ SHORT adj = 0;
 UWORD plotY = 100;
 UWORD plotX;
 
+
 static void Scroll() {
     Screen_SetY(&textScreen, bounce.y);
     Bounce_Update(&bounce);
@@ -117,8 +113,6 @@ static void Scroll() {
 
 static void MoveLine() 
 {
-    custom->intreq = INTF_VERTB;
- 
     if(line == LINE_TOP || line == LINE_BOTTOM)
         line_direction = -line_direction;
     line += line_direction;
@@ -129,12 +123,8 @@ static void MoveLine()
 }
 
 static __interrupt void OnVBlank() {
-    MoveLine();
-    Scroll();
-
-    Explosion_NextFrame(explosion);
-    Explosion_Move(explosion, 1, 0);
-    Explosion_Paint(explosion);
+    custom->intreq = INTF_VERTB;
+    p61Music();
 }
 
 UWORD imageSizeWithMargin;
@@ -277,17 +267,21 @@ int main()
     custom->intena = INTF_SETCLR | INTF_VERTB;
     custom->intreq = INTF_VERTB;
     custom->cop1lc = (ULONG)copinit;
-	custom->dmacon = DMAF_SETCLR | DMAF_ALL;
+    custom->dmacon = DMAF_SETCLR | DMAF_ALL;
+
+    p61Init(music);
 
     // main loop
-	while(1) // active low
+	while(1)
 	{
-        if((ciaa->ciapra & CIAF_GAMEPORT0) == 0) {
-            adj++;
-            KPrintF("%d %d", adj);
-            while((ciaa->ciapra & CIAF_GAMEPORT0) == 0) {}
-        }
-        // interrupt handler moves the line on the screen
+        WaitForLine10();
+        
+        MoveLine();
+        Scroll();
+
+        Explosion_NextFrame(explosion);
+        Explosion_Move(explosion, 1, 0);
+        Explosion_Paint(explosion);
 	}
 
     System_Restore(&systemData);

@@ -1,4 +1,9 @@
 #pragma once
+#ifndef __INTELLISENSE__
+    #define ASM __asm
+#else
+    #define ASM(...)
+#endif
 
 #ifdef __cplusplus
 	extern "C" {
