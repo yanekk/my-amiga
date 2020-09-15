@@ -1,6 +1,7 @@
 #include <hardware/cia.h>
 #include <proto/graphics.h>
 
+#include <exec/interrupts.h>
 #include <hardware/intbits.h>
 #include <hardware/dmabits.h>
 #include <string.h>
@@ -37,7 +38,7 @@
 #define LINES 8
 
 #define COPPERLIST_SIZE 512
-#define MUSIC 0
+#define MUSIC 1
 
 INCBIN(imageData, ".\\\\assets\\\\image.164x72.raw");
 INCBIN(imageColors, ".\\\\assets\\\\palette.raw");
@@ -123,10 +124,16 @@ static void MoveLine()
     }
 }
 
-static __interrupt void OnVBlank() {
+static void OnVBlank() {
     custom->intreq = INTF_VERTB;
-    if(MUSIC)
-        p61Music();
+
+    MoveLine();
+    Scroll();
+
+    Explosion_NextFrame(explosion);
+    Explosion_Move(explosion, 1, 0);
+    Explosion_Paint(explosion);
+    if(MUSIC) P61Music();
 }
 
 UWORD imageSizeWithMargin;
@@ -190,6 +197,7 @@ static void CreateFontScreen() {
 static void InitializeTextPlotting() {
     plotX = textScreen.Width - FONT_LETTER_WIDTH;
 }
+struct Interrupt vblankInterrupt;
 
 int main() 
 {
@@ -264,26 +272,22 @@ int main()
 
     WaitVbl();
 
-    // initialize custom values
-    SetInterruptHandler((APTR)OnVBlank);
+    SetIntVector(INTB_VERTB, &((struct Interrupt) {
+        .is_Code = OnVBlank
+    }));
+
     custom->intena = INTF_SETCLR | INTF_VERTB;
     custom->intreq = INTF_VERTB;
     custom->cop1lc = (ULONG)copinit;
     custom->dmacon = DMAF_SETCLR | DMAF_ALL;
 
-    p61Init(music);
+    if(MUSIC) P61Init(music);
 
     // main loop
 	while(1)
 	{
-        WaitForLine10();
-        
-        MoveLine();
-        Scroll();
 
-        Explosion_NextFrame(explosion);
-        Explosion_Move(explosion, 1, 0);
-        Explosion_Paint(explosion);
+  
 	}
 
     System_Restore(&systemData);

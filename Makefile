@@ -7,20 +7,28 @@ forward-to-backward = $(subst /,\,$1)
 
 subdirs := $(wildcard */)
 VPATH = $(subdirs)
-sources := $(wildcard $(SRC_DIR)/*.c) $(wildcard $(SRC_DIR)/**/*.c)
+
+c_sources := $(wildcard $(SRC_DIR)/*.c) $(wildcard $(SRC_DIR)/**/*.c)
+c_objects := $(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR)/%.o,$(c_sources))
+
 asm_sources := $(wildcard $(SRC_DIR)/*.s) $(wildcard $(SRC_DIR)/**/*.s)
-objects := $(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR)/%.o,$(sources))
 asm_objects := $(patsubst $(SRC_DIR)/%.s,$(OBJ_DIR)/%.o,$(asm_sources))
-all_objects = $(objects) $(asm_objects)
+
+m68k_sources := $(wildcard $(SRC_DIR)/*.asm) $(wildcard $(SRC_DIR)/**/*.asm)
+m68k_objects := $(patsubst $(SRC_DIR)/%.asm,$(BIN_DIR)/%.bin,$(m68k_sources))
+
+all_objects = $(c_objects) $(asm_objects)
 
 OUT = a.mingw
 CC = m68k-amiga-elf-gcc
+VASM = vasmm68k_mot
 
 CCFLAGS = -g -MP -MMD -m68000 -Ofast -nostdlib -Wall -Wno-unused-function -Wno-volatile-register-var -fomit-frame-pointer -fno-tree-loop-distribution -flto -fwhole-program -fno-exceptions
 ASFLAGS = -Wa,-g
 LDFLAGS = -Wl,--emit-relocs,-Ttext=0,-Map=$(BIN_DIR)/$(OUT).map
+VASMFLAGS = -Fhunkexe -m68000
 
-all: $(BIN_DIR)/$(OUT).exe
+all: | $(m68k_objects) $(BIN_DIR)/$(OUT).exe
 
 $(BIN_DIR)/$(OUT).exe: $(BIN_DIR)/$(OUT).elf
 	$(info Elf2Hunk $(OUT).exe)
@@ -32,17 +40,24 @@ $(BIN_DIR)/$(OUT).elf: $(all_objects)
 	$(CC) $(CCFLAGS) $(LDFLAGS) $(all_objects) -o $@
 	@m68k-amiga-elf-objdump --disassemble -S $@ >$(BIN_DIR)/$(OUT).s 
 
+$(m68k_objects): bin/%.bin : %.asm
+	$(info M68k assembling $<)
+	@if not exist "$(call forward-to-backward,$(dir $@))" mkdir $(call forward-to-backward,$(dir $@))
+	$(VASM) $(VASMFLAGS) -o $(CURDIR)/$@ $(CURDIR)/$<
+
+-include $(all_objects:.o=.d)
+
 $(asm_objects): obj/%.o : %.s
 	$(info Assembling $<)
 	@$(CC) $(CCFLAGS) $(ASFLAGS) -xassembler-with-cpp -c -o $@ $(CURDIR)/$<
+
+$(c_objects) : obj/%.o : %.c
+	@if not exist "$(call forward-to-backward,$(dir $@))" mkdir $(call forward-to-backward,$(dir $@))
+	$(info Compiling $<)
+	@$(CC) $(CCFLAGS) -c -o $@ $(CURDIR)/$<
 
 clean:
 	$(info Cleaning...)
 	rm $(OBJ_DIR) $(BIN_DIR) -r
 
--include $(objects:.o=.d)
 
-$(objects) : obj/%.o : %.c
-	@if not exist "$(call forward-to-backward,$(dir $@))" mkdir $(call forward-to-backward,$(dir $@))
-	$(info Compiling $<)
-	@$(CC) $(CCFLAGS) -c -o $@ $(CURDIR)/$<
