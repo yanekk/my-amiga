@@ -15,20 +15,20 @@ asm_sources := $(wildcard $(SRC_DIR)/*.s) $(wildcard $(SRC_DIR)/**/*.s)
 asm_objects := $(patsubst $(SRC_DIR)/%.s,$(OBJ_DIR)/%.o,$(asm_sources))
 
 m68k_sources := $(wildcard $(SRC_DIR)/*.asm) $(wildcard $(SRC_DIR)/**/*.asm)
-m68k_objects := $(patsubst $(SRC_DIR)/%.asm,$(BIN_DIR)/%.bin,$(m68k_sources))
+m68k_objects := $(patsubst $(SRC_DIR)/%.asm,$(OBJ_DIR)/%.o,$(m68k_sources))
 
-all_objects = $(c_objects) $(asm_objects)
+all_objects = $(c_objects) $(asm_objects) $(m68k_objects)
 
 OUT = a.mingw
 CC = m68k-amiga-elf-gcc
-VASM = vasmm68k_mot
+VASM = ./opt/bin/vasmm68k_mot
 
 CCFLAGS = -g -MP -MMD -m68000 -Ofast -nostdlib -Wall -Wno-unused-function -Wno-volatile-register-var -fomit-frame-pointer -fno-tree-loop-distribution -flto -fwhole-program -fno-exceptions
 ASFLAGS = -Wa,-g
 LDFLAGS = -Wl,--emit-relocs,-Ttext=0,-Map=$(BIN_DIR)/$(OUT).map
-VASMFLAGS = -Fhunkexe -m68000
+VASMFLAGS = -Felf -m68000
 
-all: | $(m68k_objects) $(BIN_DIR)/$(OUT).exe
+all: $(BIN_DIR)/$(OUT).exe
 
 $(BIN_DIR)/$(OUT).exe: $(BIN_DIR)/$(OUT).elf
 	$(info Elf2Hunk $(OUT).exe)
@@ -40,12 +40,12 @@ $(BIN_DIR)/$(OUT).elf: $(all_objects)
 	$(CC) $(CCFLAGS) $(LDFLAGS) $(all_objects) -o $@
 	@m68k-amiga-elf-objdump --disassemble -S $@ >$(BIN_DIR)/$(OUT).s 
 
-$(m68k_objects): bin/%.bin : %.asm
+-include $(all_objects:.o=.d)
+
+$(m68k_objects): obj/%.o : %.asm
 	$(info M68k assembling $<)
 	@if not exist "$(call forward-to-backward,$(dir $@))" mkdir $(call forward-to-backward,$(dir $@))
-	$(VASM) $(VASMFLAGS) -o $(CURDIR)/$@ $(CURDIR)/$<
-
--include $(all_objects:.o=.d)
+	$(VASM) $(VASMFLAGS) -o $@ $(CURDIR)/$<
 
 $(asm_objects): obj/%.o : %.s
 	$(info Assembling $<)

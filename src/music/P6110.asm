@@ -15,7 +15,7 @@
 ;	    11 scanlines later to set sound DMA. Maximum optimized.)
 
 
-P61mode	=1	;Try other modes ONLY IF there are no Fxx commands >= 20.
+P61mode	=2	;Try other modes ONLY IF there are no Fxx commands >= 20.
 		;(f.ex., P61.new_ditty only works with P61mode=1)
 
 
@@ -181,15 +181,29 @@ suppF01	=P61pl	;if 1, split4=1 may cause sound errors. but try it anyway. :)
 	endc
 
 ********** CODE START **********
-P61_I:
+	public ThePlayer61_Initialize
+ThePlayer61_Initialize:
+	move.l 4(sp),a0
+	movem.l d1-a6,-(sp)
+
 	sub.l a1,a1
 	sub.l a2,a2
 	moveq #0,d0
 	bsr P61_Init
+
+	movem.l (sp)+,d1-a6
+	move.l (sp),4(sp)
+	addq.l #4,sp
 	rts
 
-P61_P:
+	public ThePlayer61_Play
+ThePlayer61_Play:
+	movem.l d1-a6,-(sp)
+
+	lea $dff000,a6
 	bsr P61_Music
+
+	movem.l (sp)+,d1-a6
 	rts
 
 Playrtn:

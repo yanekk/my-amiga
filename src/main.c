@@ -19,7 +19,7 @@
 #include "copper/display.h"
 #include "effects/bounce.h"
 #include "blitter/copy.h"
-#include "music/p61.h"
+#include "music/P6110.h"
 
 #define IMG_H 72
 
@@ -133,7 +133,8 @@ static void OnVBlank() {
     Explosion_NextFrame(explosion);
     Explosion_Move(explosion, 1, 0);
     Explosion_Paint(explosion);
-    if(MUSIC) P61Music();
+    
+    if(MUSIC) ThePlayer61_Play();
 }
 
 UWORD imageSizeWithMargin;
@@ -197,11 +198,16 @@ static void CreateFontScreen() {
 static void InitializeTextPlotting() {
     plotX = textScreen.Width - FONT_LETTER_WIDTH;
 }
+
 struct Interrupt vblankInterrupt;
+UWORD* custombase;
 
 int main() 
 {
     SysBase = *((struct ExecBase**)4UL);
+    
+    if(MUSIC) ThePlayer61_Initialize(music);
+
     line_colors[LINES-1] = ((UWORD*)imageColors)[0];
 
     letterCount = strlen(letters);
@@ -280,8 +286,6 @@ int main()
     custom->intreq = INTF_VERTB;
     custom->cop1lc = (ULONG)copinit;
     custom->dmacon = DMAF_SETCLR | DMAF_ALL;
-
-    if(MUSIC) P61Init(music);
 
     // main loop
 	while(1)

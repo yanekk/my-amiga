@@ -30,6 +30,7 @@
 
 # Executables
 *.exe
+!opt/bin/*
 *.out
 *.app
 *.i*86
