@@ -18,11 +18,11 @@ struct Explosion {
     SHORT currentStep;
     UWORD* copperListSpritePointer;
     struct ExplosionFrame* frames[EXPLOSION_FRAMES];
+    SHORT spritePointer;
 };
 
-struct Explosion* Explosion_Create(SHORT vStart, SHORT hStart);
+struct Explosion* Explosion_Create(SHORT vStart, SHORT hStart, SHORT spritePointer);
 void Explosion_NextFrame(struct Explosion* explosion);
 void Explosion_Move(struct Explosion* explosion, SHORT x, SHORT y);
 void Explosion_Paint(struct Explosion* explosion);
 struct ExplosionFrame* Explosion_CurrentFrame(struct Explosion* explosion);
-void Explosion_Free(struct Explosion* explosion);

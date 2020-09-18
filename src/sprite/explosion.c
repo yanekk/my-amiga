@@ -20,10 +20,12 @@ static inline UBYTE Explosion_CalculateFlags(UWORD spriteVStart, UWORD spriteVSt
     return (((spriteVStart & 0xF00) >> 8) << 2) | (((spriteVStop & 0xF00) >> 8) << 1);
 }
 
-struct Explosion* Explosion_Create(SHORT hStart, SHORT vStart) 
+struct Explosion* Explosion_Create(SHORT hStart, SHORT vStart, SHORT spritePointer) 
 {
     struct Explosion* explosion = AllocMem(sizeof(struct Explosion), MEMF_CLEAR);
     explosion->currentFrame = 0;
+    explosion->spritePointer = spritePointer;
+
     for(SHORT i = 0; i < EXPLOSION_FRAMES; i++) 
     {
         struct ExplosionFrame* frame = AllocMem(sizeof(struct ExplosionFrame), MEMF_CLEAR);
@@ -97,10 +99,5 @@ void Explosion_Move(struct Explosion* explosion, SHORT x, SHORT y)
 
 void Explosion_Paint(struct Explosion* explosion) {
     UWORD* ptr = explosion->copperListSpritePointer;
-    CPMOVE_L(ptr, SPR0PTH, (ULONG)Explosion_CurrentFrame(explosion)->sprite);
-}
-
-void Explosion_Free(struct Explosion* explosion) 
-{
-
+    CPMOVE_L(ptr, explosion->spritePointer, (ULONG)Explosion_CurrentFrame(explosion)->sprite);
 }

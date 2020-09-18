@@ -10,7 +10,3 @@ struct MySprite* AllocMySprite(struct MySprite newSprite, const UWORD *spriteDat
     CopyMem((UWORD*)spriteData, &spritePtr->data, spriteDataSize);
     return spritePtr;
 }
-
-void FreeMySprite(struct MySprite *sprite, SHORT spriteDataSize) {
-    FreeMem(sprite, sizeof(struct MySprite) + spriteDataSize);
-}

@@ -15,4 +15,3 @@ struct MySprite {
 };
 
 struct MySprite *AllocMySprite(struct MySprite newSprite, const UWORD *spriteData, SHORT spriteDataSize);
-void FreeMySprite(struct MySprite *sprite, SHORT spriteDataSize);

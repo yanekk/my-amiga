@@ -179,11 +179,12 @@ dupedec	=1
 suppF01	=P61pl	;if 1, split4=1 may cause sound errors. but try it anyway. :)
 
 	endc
+WORD = 4
 
 ********** CODE START **********
 	public ThePlayer61_Initialize
 ThePlayer61_Initialize:
-	move.l 4(sp),a0
+	move.l WORD(sp),a0
 	movem.l d1-a6,-(sp)
 
 	sub.l a1,a1
@@ -192,8 +193,8 @@ ThePlayer61_Initialize:
 	bsr P61_Init
 
 	movem.l (sp)+,d1-a6
-	move.l (sp),4(sp)
-	addq.l #4,sp
+	move.l (sp),WORD(sp)
+	addq.l #WORD,sp
 	rts
 
 	public ThePlayer61_Play
