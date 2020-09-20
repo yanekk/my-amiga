@@ -6,51 +6,49 @@
 #include "../copper/screen.h"
 #include "../support/gcc8_c_support.h"
 
+static volatile struct Custom *custom = (struct Custom *)0xdff000;
+
+static inline void Blit(ULONG con0, ULONG afwm, APTR aPtr, APTR dPtr, UWORD aMod, UWORD dMod, UWORD height, UWORD width) 
+{
+    WaitBlit();
+    LONG_PTR(custom->bltcon0) = con0;
+    LONG_PTR(custom->bltafwm) = afwm;
+    custom->bltapt = aPtr;
+    custom->bltdpt = dPtr;
+    custom->bltamod = aMod;
+    custom->bltdmod = dMod;
+    custom->bltsize = height * 64 + width/16;
+}
+
 void Blitter_CopyAtoB(struct NewScreen* source, UWORD sourceX, UWORD sourceY, UWORD sourceW, UWORD sourceH, struct NewScreen* destination, UWORD destinationX, UWORD destinationY) 
 {
-    volatile struct Custom *custom = (struct Custom *)0xdff000;
-    LONG_PTR(custom->bltcon0) = 0x09f00000;
-    LONG_PTR(custom->bltafwm) = 0xffffffff;
-
     for(SHORT bpl = 0; bpl < source->Bitplanes; bpl++) 
     {
-        WaitBlit();
         UWORD sourceOffset = (bpl * source->BitplaneSize) 
             + (sourceX / 8) + (sourceY * source->RowWidth);
-
-        custom->bltapt = (APTR)((ULONG)source->Data + sourceOffset);
 
         UWORD destinationOffset = (bpl * destination->BitplaneSize) 
             + (destinationX / 8) + (destinationY * destination->RowWidth);
 
-        custom->bltdpt = (APTR)((ULONG)destination->Data + destinationOffset);
-
-        custom->bltamod = source->RowWidth - sourceW/8; 
-        custom->bltdmod = destination->RowWidth - sourceW/8;
-        custom->bltsize = (UWORD)(sourceH * 64 + 1);  
+        Blit(0x09f00000, 0xffffffff,
+            (APTR)((ULONG)source->Data + sourceOffset),
+            (APTR)((ULONG)destination->Data + destinationOffset),
+            source->RowWidth - sourceW/8,
+            destination->RowWidth - sourceW/8,
+            sourceH, sourceW);
     }
 }
 
 void Blitter_ShiftALeft(struct NewScreen* screen, SHORT x, SHORT y, SHORT width, SHORT height, SHORT scrollSpeed)
 {
-    volatile struct Custom *custom = (struct Custom *)0xdff000;
-    LONG_PTR(custom->bltcon0) = 0x09f00002 | scrollSpeed << 28;
-    LONG_PTR(custom->bltafwm) = 0xffffffff;
-
     for(SHORT bpl = 0; bpl < screen->Bitplanes; bpl++) 
     {
-        WaitBlit();
-        ULONG bltw = width / 16;
-        ULONG offset = (bpl * screen->BitplaneSize) + ((y + height) * screen->RowWidth) + (x / 8);
-        
+        ULONG offset = (bpl * screen->BitplaneSize) + ((y + height-1) * screen->RowWidth) + (x / 8);
         APTR bitplane_offset = (APTR)((ULONG)screen->Data + offset);
+        UWORD modulo = screen->RowWidth - width/8;
 
-        custom->bltapt = bitplane_offset;
-        custom->bltdpt = bitplane_offset;
-        
-        custom->bltdmod = screen->RowWidth - width/8;
-        custom->bltamod = screen->RowWidth - width/8; 
-
-        custom->bltsize = (height+1) * 64 + bltw;
+        Blit(0x09f00002 | scrollSpeed << 28, 0xffffffff,
+            bitplane_offset, bitplane_offset,
+            modulo, modulo, height, width);
     }
 }

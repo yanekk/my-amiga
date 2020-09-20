@@ -40,9 +40,10 @@ UWORD* Initialize_TextScreen(UWORD* copPtr, struct NewScreen* textScreen, struct
     textScreen->Size = Screen_Size(textScreen);
 
     textScreen->Data = AllocMem(textScreen->Size, MEMF_CHIP | MEMF_CLEAR);
-    /*UWORD c = 0;
-    for(ULONG i = 0; i < textScreen.Size; i++) {
-        bottomScreen[i] = c;
+    UWORD c = 0;
+    
+    /*for(ULONG i = 0; i < textScreen->Size; i++) {
+        textScreen->Data[i] = c;
         c++;
     }*/
 

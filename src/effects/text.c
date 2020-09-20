@@ -9,7 +9,7 @@
 #define FONT_LETTERS_PER_LINE 18 * FONT_LETTER_WIDTH
 #define FONT_PLOT_Y 100
 
-#define SCROLL_SPEED 2
+#define SCROLL_SPEED 1
 
 static UWORD plotX;
 
