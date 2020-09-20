@@ -39,7 +39,7 @@ void TextPlotting_Scroll() {
     if(scrollCounter == 0) {
         USHORT letterNumber = letters[letterIndex] - 0x1e;
 
-        Blitter_CookieCut(sScreen, dScreen, &mScreen,
+        Blitter_CopyAtoB(sScreen, /*, dScreen, &mScreen,*/
             letterNumber % FONT_LETTERS_PER_LINE,
             letterNumber / FONT_LETTERS_PER_LINE,
             FONT_LETTER_WIDTH, FONT_LETTER_HEIGHT,

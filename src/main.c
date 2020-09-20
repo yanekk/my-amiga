@@ -127,13 +127,21 @@ int main()
     copPtr = Line_Initialize(copPtr, LINE_TOP, LINE_BOTTOM, logoScreen.Palette[0], &lines);
 
     // second screen
-    CPWAIT(copPtr, CPLINE(LINE_BOTTOM+lines, LINE_END));
+    CPWAIT(copPtr, CPLINE(LINE_BOTTOM + lines, LINE_END));
 
     Initialize_TextScreen(&textScreen, &display);
 
     copPtr = Initialize_ScreenBuffer(copPtr, &screenBuffer, &display);
     
     TextPlotting_Initialize(&fontScreen, &textScreen, &screenBuffer, "GREETINGS FROM THE OLD AMIGA COMPUTER!   ");
+
+    UWORD color = 0x00F;
+
+    for(SHORT i = 0; i < 64; i += 4) {
+        CPWAIT(copPtr, CPLINE(LINE_BOTTOM + lines + i, LINE_START));
+        CPMOVE(copPtr, COLOR00, color);
+        color -= 1;
+    }
     
     // bottom line
     CPWAIT(copPtr, CPLINE(0xff, LINE_END));

@@ -49,10 +49,10 @@ void Initialize_TextScreen(struct NewScreen* textScreen, struct Display* display
     
     textScreen->Data = AllocMem(textScreen->Size, MEMF_CHIP | MEMF_CLEAR);
 
-    UWORD c = 0xFFFF;
+    /*UWORD c = 0xFFFF;
     for(UWORD i = 0; i < textScreen->Size/2; i++) {
         textScreen->Data[i] = c;
-    }
+    }*/
 
     textScreen->Palette = fontColors;    
     textScreen->Display = display;
