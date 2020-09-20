@@ -53,8 +53,8 @@ UWORD* Screen_Create(UWORD* copPtr, struct NewScreen* newScreen)
     CPMOVE(copPtr, BPLCON1, 0x0000);
     CPMOVE(copPtr, BPLCON2, 0x0000);
 
-    CPMOVE(copPtr, DDFSTRT, 0x38 + screenMargin / 2);
-    CPMOVE(copPtr, DDFSTOP, 0xd0 - screenMargin / 2);
+    CPMOVE(copPtr, DDFSTRT, newScreen->Display->HStart + screenMargin / 2);
+    CPMOVE(copPtr, DDFSTOP, newScreen->Display->HStop - screenMargin / 2);
     
     return copPtr;
 }

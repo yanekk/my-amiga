@@ -15,7 +15,7 @@ UWORD* Initialize_Display(UWORD* copPtr, struct Display* display) {
     display->Width = 320;
     display->Height = 256;
     display->TopMargin = 76;
-    display->LeftMargin = 110;
+    display->LeftMargin = 129;
     return Display_Create(copPtr, display);
 }
 
@@ -39,18 +39,19 @@ UWORD* Initialize_LogoScreen(UWORD* copPtr, struct NewScreen* logoScreen, struct
 }
 
 UWORD* Initialize_TextScreen(UWORD* copPtr, struct NewScreen* textScreen, struct Display* display) {
-    textScreen->Width = 352;
+    textScreen->Width = 336;
     textScreen->Height = display->Height;
     textScreen->Bitplanes = 3;
     textScreen->Size = Screen_Size(textScreen);
     
     textScreen->Data = AllocMem(textScreen->Size, MEMF_CHIP | MEMF_CLEAR);
-    /*UWORD c = 0;
+    
+    /*UWORD c = 0xFFFF;
     
     for(UWORD i = 0; i < textScreen->Size/2; i++) {
         textScreen->Data[i] = c;
-        c++;
-    }*/
+    }
+    */
 
     textScreen->Palette = fontColors;    
     textScreen->Display = display;

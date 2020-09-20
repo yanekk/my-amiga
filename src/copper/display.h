@@ -6,5 +6,9 @@ struct Display {
     UWORD Height;
     USHORT TopMargin;
     USHORT LeftMargin;
+
+    // private
+    USHORT HStart;
+    USHORT HStop;
 };
 UWORD* Display_Create(UWORD* copPtr, struct Display* display);
