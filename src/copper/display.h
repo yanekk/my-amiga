@@ -5,6 +5,6 @@ struct Display {
     UWORD Width;
     UWORD Height;
     USHORT TopMargin;
-    USHORT LeftMargin; 
+    USHORT LeftMargin;
 };
 UWORD* Display_Create(UWORD* copPtr, struct Display* display);

@@ -22,24 +22,22 @@ UWORD inline Screen_Size(struct NewScreen* newScreen) {
 
 UWORD* Screen_Create(UWORD* copPtr, struct NewScreen* newScreen) 
 {
-    UWORD rowWidth = newScreen->Width / 8;
-
     newScreen->RowWidth = Screen_RowWidth(newScreen);
     newScreen->BitplaneSize = Screen_BitplaneSize(newScreen);
     newScreen->Size = Screen_Size(newScreen);
 
-    UWORD screenMargin = 0;
-    UWORD screenModuloDiff;
+    SHORT screenMargin = 0;
+    UWORD screenModulo = newScreen->RowWidth * newScreen->Bitplanes;
     if(newScreen->Width < newScreen->Display->Width) {
         screenMargin = (newScreen->Display->Width - newScreen->Width) / 2;
-        screenModuloDiff = rowWidth;
+        screenModulo -= newScreen->RowWidth;
     } else {
-        screenModuloDiff = newScreen->Display->Width / 8;
-    }   
+        screenModulo -= newScreen->Display->Width / 8;
+    }
 
     newScreen->BitplanesCopperPointer = copPtr;
     for(SHORT i = 0; i < newScreen->Bitplanes; i++) {
-        ULONG bpl = ((ULONG)newScreen->Data) + i * newScreen->BitplaneSize;
+        ULONG bpl = ((ULONG)newScreen->Data) + i * newScreen->RowWidth;
         CPMOVE_L(copPtr, offsetof(struct Custom, bplpt[i]), bpl);
     }
 
@@ -48,8 +46,8 @@ UWORD* Screen_Create(UWORD* copPtr, struct NewScreen* newScreen)
         CPMOVE(copPtr, offsetof(struct Custom, color[i]), color);
     }
 
-    CPMOVE(copPtr, BPL1MOD, rowWidth - screenModuloDiff);
-    CPMOVE(copPtr, BPL2MOD, rowWidth - screenModuloDiff);
+    CPMOVE(copPtr, BPL1MOD, screenModulo);
+    CPMOVE(copPtr, BPL2MOD, screenModulo);
 
     CPMOVE(copPtr, BPLCON0, 0x1000 * newScreen->Bitplanes + 0x0200);
     CPMOVE(copPtr, BPLCON1, 0x0000);
@@ -63,10 +61,10 @@ UWORD* Screen_Create(UWORD* copPtr, struct NewScreen* newScreen)
 
 void Screen_SetY(struct NewScreen* newScreen, SHORT y) 
 {
-    UWORD* screenPtr = (UWORD*)((ULONG)newScreen->Data);
+    UWORD* screenPtr = (UWORD*)((ULONG)newScreen->Data + (newScreen->RowWidth * newScreen->Bitplanes * y));
     UWORD* copPtr = newScreen->BitplanesCopperPointer;
-    for(SHORT bpl = 0; bpl < newScreen->Bitplanes; bpl++) {
-        ULONG bplPtr = ((ULONG)screenPtr) + bpl * newScreen->BitplaneSize + y * newScreen->RowWidth;  
-        CPMOVE_L(copPtr, offsetof(struct Custom, bplpt[bpl]), bplPtr);
+    for(SHORT i = 0; i < newScreen->Bitplanes; i++) {
+        ULONG bpl = ((ULONG)screenPtr) + i * newScreen->RowWidth;  
+        CPMOVE_L(copPtr, offsetof(struct Custom, bplpt[i]), bpl);
     }
 }

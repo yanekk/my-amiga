@@ -5,15 +5,15 @@ struct NewScreen {
     SHORT Bitplanes;
     UWORD* Data;
     UWORD* Palette;
-    UWORD Width;
+    UWORD Width; 
     UWORD Height;
     struct Display* Display;
 
     // do not modify, set internally by Screen_Create
     UWORD* BitplanesCopperPointer;
-    UWORD BitplaneSize;
-    UWORD RowWidth;
-    UWORD Size;
+    UWORD BitplaneSize; // RowWidth * Height
+    UWORD RowWidth; // Width / 8
+    UWORD Size; // BitplaneSize * Bitplanes
 };
 
 UWORD* Screen_Create(UWORD* copPtr, struct NewScreen* newScreen);

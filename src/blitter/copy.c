@@ -22,33 +22,24 @@ static inline void Blit(ULONG con0, ULONG afwm, APTR aPtr, APTR dPtr, UWORD aMod
 
 void Blitter_CopyAtoB(struct NewScreen* source, UWORD sourceX, UWORD sourceY, UWORD sourceW, UWORD sourceH, struct NewScreen* destination, UWORD destinationX, UWORD destinationY) 
 {
-    for(SHORT bpl = 0; bpl < source->Bitplanes; bpl++) 
-    {
-        UWORD sourceOffset = (bpl * source->BitplaneSize) 
-            + (sourceX / 8) + (sourceY * source->RowWidth);
+    UWORD sourceOffset = (sourceY * source->RowWidth * source->Bitplanes) + (sourceX / 8);
+    UWORD destinationOffset = (destinationY * destination->RowWidth * destination->Bitplanes) + (destinationX / 8);
 
-        UWORD destinationOffset = (bpl * destination->BitplaneSize) 
-            + (destinationX / 8) + (destinationY * destination->RowWidth);
-
-        Blit(0x09f00000, 0xffffffff,
-            (APTR)((ULONG)source->Data + sourceOffset),
-            (APTR)((ULONG)destination->Data + destinationOffset),
-            source->RowWidth - sourceW/8,
-            destination->RowWidth - sourceW/8,
-            sourceH, sourceW);
-    }
+    Blit(0x09f00000, 0xffffffff,
+        (APTR)((ULONG)source->Data + sourceOffset),
+        (APTR)((ULONG)destination->Data + destinationOffset),
+        source->RowWidth - sourceW/8,
+        destination->RowWidth - sourceW/8,
+        sourceH * destination->Bitplanes, sourceW);
 }
 
 void Blitter_ShiftALeft(struct NewScreen* screen, SHORT x, SHORT y, SHORT width, SHORT height, SHORT scrollSpeed)
 {
-    for(SHORT bpl = 0; bpl < screen->Bitplanes; bpl++) 
-    {
-        ULONG offset = (bpl * screen->BitplaneSize) + ((y + height-1) * screen->RowWidth) + (x / 8);
-        APTR bitplane_offset = (APTR)((ULONG)screen->Data + offset);
-        UWORD modulo = screen->RowWidth - width/8;
+    ULONG offset = ((y + height-1) * screen->RowWidth) + (x / 8);
+    APTR bitplane_offset = (APTR)((ULONG)screen->Data + offset);
+    UWORD modulo = screen->RowWidth - width/8;
 
-        Blit(0x09f00002 | scrollSpeed << 28, 0xffffffff,
-            bitplane_offset, bitplane_offset,
-            modulo, modulo, height, width);
-    }
+    Blit(0x09f00002 | scrollSpeed << 28, 0xffffffff,
+        bitplane_offset, bitplane_offset,
+        modulo, modulo, height, width);
 }
