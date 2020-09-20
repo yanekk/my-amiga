@@ -35,11 +35,11 @@ void Blitter_CopyAtoB(struct NewScreen* source, UWORD sourceX, UWORD sourceY, UW
 
 void Blitter_ShiftALeft(struct NewScreen* screen, SHORT x, SHORT y, SHORT width, SHORT height, SHORT scrollSpeed)
 {
-    ULONG offset = ((y + height-1) * screen->RowWidth) + (x / 8);
+    ULONG offset = ((y + height) * screen->RowWidth * screen->Bitplanes) + (x / 8) - screen->RowWidth;
     APTR bitplane_offset = (APTR)((ULONG)screen->Data + offset);
     UWORD modulo = screen->RowWidth - width/8;
 
     Blit(0x09f00002 | scrollSpeed << 28, 0xffffffff,
         bitplane_offset, bitplane_offset,
-        modulo, modulo, height, width);
+        modulo, modulo, height * screen->Bitplanes, width);
 }

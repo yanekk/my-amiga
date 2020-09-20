@@ -39,17 +39,18 @@ UWORD* Initialize_LogoScreen(UWORD* copPtr, struct NewScreen* logoScreen, struct
 }
 
 UWORD* Initialize_TextScreen(UWORD* copPtr, struct NewScreen* textScreen, struct Display* display) {
-    textScreen->Width = 320;//352;
+    textScreen->Width = 352;
     textScreen->Height = display->Height;
     textScreen->Bitplanes = 3;
     textScreen->Size = Screen_Size(textScreen);
     
     textScreen->Data = AllocMem(textScreen->Size, MEMF_CHIP | MEMF_CLEAR);
-    UWORD c = 0xFFFF;
+    /*UWORD c = 0;
     
     for(UWORD i = 0; i < textScreen->Size/2; i++) {
-        textScreen->Data[i] = 1;
-    }
+        textScreen->Data[i] = c;
+        c++;
+    }*/
 
     textScreen->Palette = fontColors;    
     textScreen->Display = display;

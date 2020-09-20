@@ -39,7 +39,7 @@ void TextPlotting_Scroll() {
             letterNumber % FONT_LETTERS_PER_LINE,
             letterNumber / FONT_LETTERS_PER_LINE,
             FONT_LETTER_WIDTH, FONT_LETTER_HEIGHT,
-            dScreen, plotX, 0);
+            dScreen, plotX, FONT_PLOT_Y);
 
         letterIndex++;
         if(letterIndex >= letterCount) letterIndex = 0;
@@ -48,7 +48,7 @@ void TextPlotting_Scroll() {
     scrollCounter += SCROLL_SPEED;
     if(scrollCounter == FONT_LETTER_WIDTH)
         scrollCounter = 0;
-    /*Blitter_ShiftALeft(dScreen, plotX, FONT_PLOT_Y, 
-        dScreen->Width, FONT_LETTER_HEIGHT, SCROLL_SPEED);*/
+    Blitter_ShiftALeft(dScreen, plotX, FONT_PLOT_Y, 
+        dScreen->Width, FONT_LETTER_HEIGHT, SCROLL_SPEED);
 }
 

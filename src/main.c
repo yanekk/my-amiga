@@ -51,15 +51,14 @@ UWORD *bottomScreenData;
 
 static void OnVBlank() {
     custom->intreq = INTF_VERTB;
-    /*
+    
     Line_Move();
     
     Screen_SetY(&textScreen, bounce.y);
     Bounce_Update(&bounce);
-    */
     
     TextPlotting_Scroll();
-    /*
+    
     Explosion_NextFrame(explosion_1);
     Explosion_Move(explosion_1, 1, 0);
     Explosion_Paint(explosion_1);
@@ -67,7 +66,7 @@ static void OnVBlank() {
     Explosion_NextFrame(explosion_2);
     Explosion_Move(explosion_2, 1, 0);
     Explosion_Paint(explosion_2);
-    */
+    
     if(MUSIC) ThePlayer61_Play();
 }
 
