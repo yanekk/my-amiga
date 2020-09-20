@@ -1,4 +1,5 @@
 #include <exec/types.h>
+#include <proto/exec.h>
 #include <hardware/custom.h>
 #include <stddef.h>
 
@@ -7,6 +8,7 @@
 
 #include "../common/custom_chip.h"
 #include "../common/utils.h"
+#include "../support/gcc8_c_support.h"
 
 UWORD inline Screen_RowWidth(struct NewScreen* newScreen) {
     return newScreen->Width / 8;
@@ -67,4 +69,25 @@ void Screen_SetY(struct NewScreen* newScreen, SHORT y)
         ULONG bpl = ((ULONG)screenPtr) + i * newScreen->RowWidth;  
         CPMOVE_L(copPtr, offsetof(struct Custom, bplpt[i]), bpl);
     }
+}
+
+void Screen_CreateMask(struct NewScreen* sourceScreen, struct NewScreen* maskScreen) 
+{
+    CopyMem(sourceScreen, maskScreen, sizeof(struct NewScreen));
+    maskScreen->Data = AllocMem(sourceScreen->Size, MEMF_CHIP | MEMF_CLEAR);
+
+    UWORD value;
+    USHORT rowWidth = sourceScreen->RowWidth / 2;
+
+    for(UWORD y = 0; y < sourceScreen->Height; y++) {
+        for(UWORD x = 0; x < rowWidth; x++) {
+            value = 0;
+            for(USHORT pl = 0; pl < sourceScreen->Bitplanes; pl++) {
+                value |= sourceScreen->Data[y * rowWidth * sourceScreen->Bitplanes + x + pl * rowWidth];
+            }
+            for(USHORT pl = 0; pl < sourceScreen->Bitplanes; pl++) {
+                maskScreen->Data[y * rowWidth * sourceScreen->Bitplanes + x + pl * rowWidth] = value;
+            }
+        }
+    }  
 }

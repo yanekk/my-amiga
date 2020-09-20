@@ -15,31 +15,35 @@ static UWORD plotX;
 
 static struct NewScreen* sScreen;
 static struct NewScreen* dScreen;
+static struct NewScreen* bScreen;
+static struct NewScreen mScreen;
 
 static UWORD scrollCounter = 0;
 static USHORT letterIndex = 0;
 static USHORT letterCount;
 static char* letters;
 
-void TextPlotting_Initialize(struct NewScreen* sourceScreen, struct NewScreen* destScreen, char* text) {
-    plotX = destScreen->Width - FONT_LETTER_WIDTH;
-    dScreen = destScreen;
-    sScreen = sourceScreen;
-    
+void TextPlotting_Initialize(struct NewScreen* fontScreen, struct NewScreen* backgroundScreen, struct NewScreen* screenBuffer, char* text) {
+    plotX = backgroundScreen->Width - FONT_LETTER_WIDTH;
+    sScreen = fontScreen;
+    dScreen = backgroundScreen;
+    bScreen = screenBuffer;
+
+    Screen_CreateMask(fontScreen, &mScreen);
+
     letters = text;
     letterCount = strlen(letters);
 }
 
 void TextPlotting_Scroll() {
-
     if(scrollCounter == 0) {
         USHORT letterNumber = letters[letterIndex] - 0x1e;
 
-        Blitter_CopyAtoB(sScreen,
+        Blitter_CookieCut(sScreen, dScreen, &mScreen,
             letterNumber % FONT_LETTERS_PER_LINE,
             letterNumber / FONT_LETTERS_PER_LINE,
             FONT_LETTER_WIDTH, FONT_LETTER_HEIGHT,
-            dScreen, plotX, FONT_PLOT_Y);
+            bScreen, plotX, FONT_PLOT_Y);
 
         letterIndex++;
         if(letterIndex >= letterCount) letterIndex = 0;
@@ -48,7 +52,7 @@ void TextPlotting_Scroll() {
     scrollCounter += SCROLL_SPEED;
     if(scrollCounter == FONT_LETTER_WIDTH)
         scrollCounter = 0;
-    Blitter_ShiftALeft(dScreen, plotX, FONT_PLOT_Y, 
-        dScreen->Width, FONT_LETTER_HEIGHT, SCROLL_SPEED);
+    Blitter_ShiftALeft(bScreen, plotX, FONT_PLOT_Y, 
+        bScreen->Width, FONT_LETTER_HEIGHT, SCROLL_SPEED);
 }
 

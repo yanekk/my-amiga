@@ -23,40 +23,44 @@ UWORD* Initialize_LogoScreen(UWORD* copPtr, struct NewScreen* logoScreen, struct
     logoScreen->Width = 176;
     logoScreen->Height = 72;
     logoScreen->Bitplanes = 3;
+    logoScreen->RowWidth = Screen_RowWidth(logoScreen);
+    logoScreen->Size = Screen_Size(logoScreen);
     logoScreen->Palette = (UWORD*)imageColors;
     logoScreen->Display = display;
+    logoScreen->Data = imageData;
 
     struct NewScreen logoScreenWithMargin = {
         .Width = logoScreen->Width,
         .Height = logoScreen->Height + 10,
         .Bitplanes = logoScreen->Bitplanes
     };
-    
+
     logoScreen->Data = AllocMem(Screen_Size(&logoScreenWithMargin), MEMF_CHIP | MEMF_CLEAR);
     CopyMem(imageData, logoScreen->Data, Screen_Size(logoScreen));    
 
     return Screen_Create(copPtr, logoScreen);
 }
 
-UWORD* Initialize_TextScreen(UWORD* copPtr, struct NewScreen* textScreen, struct Display* display) {
+void Initialize_TextScreen(struct NewScreen* textScreen, struct Display* display) {
     textScreen->Width = 336;
     textScreen->Height = display->Height;
     textScreen->Bitplanes = 3;
     textScreen->Size = Screen_Size(textScreen);
     
     textScreen->Data = AllocMem(textScreen->Size, MEMF_CHIP | MEMF_CLEAR);
-    
-    /*UWORD c = 0xFFFF;
-    
+
+    UWORD c = 0xFFFF;
     for(UWORD i = 0; i < textScreen->Size/2; i++) {
         textScreen->Data[i] = c;
     }
-    */
 
     textScreen->Palette = fontColors;    
     textScreen->Display = display;
+}
 
-    return Screen_Create(copPtr, textScreen);
+UWORD* Initialize_ScreenBuffer(UWORD* copPtr, struct NewScreen* screen, struct Display* display) {
+    Initialize_TextScreen(screen, display);
+    return Screen_Create(copPtr, screen);
 }
 
 void Initialize_FontScreen(struct NewScreen* fontScreen) {

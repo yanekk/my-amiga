@@ -21,3 +21,4 @@ UWORD Screen_RowWidth(struct NewScreen* newScreen);
 UWORD Screen_BitplaneSize(struct NewScreen* newScreen);
 UWORD Screen_Size(struct NewScreen* newScreen);
 void Screen_SetY(struct NewScreen* newScreen, SHORT y);
+void Screen_CreateMask(struct NewScreen* sourceScreen, struct NewScreen* maskScreen);

@@ -44,7 +44,7 @@ struct MySprite *nullSprite;
 
 struct SystemData systemData;
 struct Display display;
-struct NewScreen logoScreen, textScreen, fontScreen;
+struct NewScreen logoScreen, textScreen, fontScreen, textScreen, screenBuffer;
 struct Bounce bounce;
 
 UWORD *bottomScreenData;
@@ -54,11 +54,11 @@ static void OnVBlank() {
     
     Line_Move();
     
-    Screen_SetY(&textScreen, bounce.y);
+    Screen_SetY(&screenBuffer, bounce.y);
     Bounce_Update(&bounce);
     
     TextPlotting_Scroll();
-    
+
     Explosion_NextFrame(explosion_1);
     Explosion_Move(explosion_1, 1, 0);
     Explosion_Paint(explosion_1);
@@ -66,7 +66,7 @@ static void OnVBlank() {
     Explosion_NextFrame(explosion_2);
     Explosion_Move(explosion_2, 1, 0);
     Explosion_Paint(explosion_2);
-    
+
     if(MUSIC) ThePlayer61_Play();
 }
 
@@ -129,9 +129,11 @@ int main()
     // second screen
     CPWAIT(copPtr, CPLINE(LINE_BOTTOM+lines, LINE_END));
 
-    copPtr = Initialize_TextScreen(copPtr, &textScreen, &display);
+    Initialize_TextScreen(&textScreen, &display);
+
+    copPtr = Initialize_ScreenBuffer(copPtr, &screenBuffer, &display);
     
-    TextPlotting_Initialize(&fontScreen, &textScreen, "GREETINGS FROM THE OLD AMIGA COMPUTER!   ");
+    TextPlotting_Initialize(&fontScreen, &textScreen, &screenBuffer, "GREETINGS FROM THE OLD AMIGA COMPUTER!   ");
     
     // bottom line
     CPWAIT(copPtr, CPLINE(0xff, LINE_END));
@@ -163,7 +165,7 @@ int main()
 
     System_Restore(&systemData);
     FreeMem(copinit, COPPERLIST_SIZE);
-    FreeMem(textScreen.Data, textScreen.Size);
+    FreeMem(screenBuffer.Data, textScreen.Size);
     FreeMem(logoScreen.Data, logoScreen.Size);
     return 0;
 }
